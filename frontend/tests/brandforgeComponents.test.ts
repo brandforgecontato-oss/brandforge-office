@@ -10,6 +10,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import AgentCard from "@/components/brandforge/AgentCard";
 import ChatPanel from "@/components/brandforge/ChatPanel";
 import DebatePanel from "@/components/brandforge/DebatePanel";
+import PlacarBoard from "@/components/brandforge/PlacarBoard";
+import { usePlacarStore } from "@/stores/placarStore";
 import { useChatStore } from "@/stores/chatStore";
 import { useDebateStore, type Debate } from "@/stores/debateStore";
 
@@ -175,5 +177,79 @@ describe("ChatPanel", () => {
     useChatStore.setState({ error: "O chat precisa do token da sessão." });
     const html = renderToString(createElement(ChatPanel));
     expect(html).toContain("O chat precisa do token da sessão.");
+  });
+});
+
+describe("PlacarBoard", () => {
+  beforeEach(() => {
+    usePlacarStore.getState().reset();
+  });
+
+  const peca = (id: string, status: string, tema: string, motivo = "") => ({
+    id,
+    tema,
+    formato: "reel",
+    status,
+    motivo,
+    origem: "pasta",
+    atualizadoEm: "2026-10-12T00:00:00Z",
+  });
+
+  it("mostra as seis colunas com a contagem de cada uma", () => {
+    usePlacarStore.setState({
+      loaded: true,
+      statuses: null,
+      pieces: [
+        peca("a", "pendente", "Tema A"),
+        peca("b", "pendente", "Tema B"),
+        peca("c", "aprovado", "Tema C"),
+      ],
+    });
+    const html = renderToString(
+      createElement(PlacarBoard, { onClose: () => {} }),
+    );
+    for (const status of [
+      "pendente",
+      "em produção",
+      "entregue",
+      "aprovado",
+      "refazer",
+      "travado",
+    ]) {
+      expect(html).toContain(`data-testid="column-${status}"`);
+    }
+    expect(html).toContain("Tema A");
+    expect(html).toContain("Tema C");
+  });
+
+  it("destaca o tema travado e pede a decisão do Silvestre", () => {
+    usePlacarStore.setState({
+      loaded: true,
+      pieces: [peca("t", "travado", "Tema travado")],
+    });
+    const html = renderToString(
+      createElement(PlacarBoard, { onClose: () => {} }),
+    );
+    expect(html).toContain('data-testid="piece-locked"');
+    expect(html).toContain("nova ideia, editar o tema ou descartar");
+  });
+
+  it("mostra o motivo de uma peça para refazer", () => {
+    usePlacarStore.setState({
+      loaded: true,
+      pieces: [peca("r", "refazer", "Tema R", "o gancho ficou lento")],
+    });
+    const html = renderToString(
+      createElement(PlacarBoard, { onClose: () => {} }),
+    );
+    expect(html).toContain("o gancho ficou lento");
+  });
+
+  it("sem peças, orienta a falar com o Orquestrador", () => {
+    usePlacarStore.setState({ loaded: true, pieces: [] });
+    const html = renderToString(
+      createElement(PlacarBoard, { onClose: () => {} }),
+    );
+    expect(html).toContain("Nenhuma peça ainda");
   });
 });

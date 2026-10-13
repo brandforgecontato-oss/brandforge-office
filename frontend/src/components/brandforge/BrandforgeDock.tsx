@@ -2,17 +2,19 @@
 
 /**
  * Doca do escritório BrandForge: botões no canto inferior esquerdo que abrem o chat com o
- * Orquestrador e o debate com o Crítico (o placar entra na próxima tarefa).
+ * Orquestrador, o debate com o Crítico e o placar de aprovação.
  */
 
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 import ChatPanel, { useChatSync } from "./ChatPanel";
 import DebatePanel, { useDebateSync } from "./DebatePanel";
+import PlacarBoard, { usePlacarSync } from "./PlacarBoard";
+import { usePlacarStore } from "@/stores/placarStore";
 
-type View = "chat" | "debate" | null;
+type View = "chat" | "debate" | "placar" | null;
 
 export default function BrandforgeDock(): ReactNode {
-  // Link direto para um painel: /?painel=chat|debate. useSyncExternalStore evita erro de
+  // Link direto para um painel: /?painel=chat|debate|placar. useSyncExternalStore evita erro de
   // hidratação (o servidor não conhece a URL).
   const linkedView = useSyncExternalStore(
     () => () => {},
@@ -23,11 +25,15 @@ export default function BrandforgeDock(): ReactNode {
   const view: View =
     chosen !== undefined
       ? chosen
-      : linkedView === "chat" || linkedView === "debate"
+      : linkedView === "chat" ||
+          linkedView === "debate" ||
+          linkedView === "placar"
         ? linkedView
         : null;
   useChatSync();
   useDebateSync();
+  usePlacarSync();
+  const lockedCount = usePlacarStore((s) => s.locked.length);
 
   const toggle = (next: Exclude<View, null>): void =>
     setChosen(view === next ? null : next);
@@ -41,7 +47,8 @@ export default function BrandforgeDock(): ReactNode {
 
   return (
     <div className="fixed bottom-3 left-3 lg:left-[21rem] z-40 flex flex-col items-start gap-2">
-      {view !== null && (
+      {view === "placar" && <PlacarBoard onClose={() => setChosen(null)} />}
+      {(view === "chat" || view === "debate") && (
         <div className="w-[24rem] max-w-[calc(100vw-1.5rem)] h-[30rem] max-h-[70vh] rounded-xl border border-neutral-700 bg-neutral-900 shadow-2xl overflow-hidden">
           {view === "chat" ? <ChatPanel /> : <DebatePanel />}
         </div>
@@ -58,6 +65,20 @@ export default function BrandforgeDock(): ReactNode {
           onClick={() => toggle("debate")}
         >
           Debate
+        </button>
+        <button
+          className={buttonClass(view === "placar")}
+          onClick={() => toggle("placar")}
+        >
+          Placar
+          {lockedCount > 0 && (
+            <span
+              className="ml-1.5 rounded-full bg-red-600 px-1.5 text-[10px] text-white"
+              title="Temas travados esperando a sua decisão"
+            >
+              {lockedCount}
+            </span>
+          )}
         </button>
       </div>
     </div>

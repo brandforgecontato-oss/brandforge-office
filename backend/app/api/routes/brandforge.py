@@ -8,6 +8,7 @@ from pydantic import BaseModel, field_validator
 from app.brandforge.chat import ChatBusyError, get_chat_service
 from app.brandforge.debate import find_debates, load_debate
 from app.brandforge.paths import office_dir
+from app.brandforge.placar import STATUSES, collect_pieces
 from app.brandforge.roster import ROSTER
 
 router = APIRouter(prefix="/brandforge", tags=["brandforge"])
@@ -97,4 +98,19 @@ async def get_debate(
     return {
         "debate": load_debate(*chosen).model_dump(by_alias=True),
         "available": available,
+    }
+
+
+@router.get("/placar")
+async def get_placar() -> dict[str, object]:
+    """Placar de aprovação: o status de cada peça, lido da pasta saida/ do escritório."""
+    pieces = collect_pieces()
+    counts = dict.fromkeys(STATUSES, 0)
+    for piece in pieces:
+        counts[piece["status"]] += 1
+    return {
+        "statuses": STATUSES,
+        "counts": counts,
+        "pieces": pieces,
+        "locked": [p["id"] for p in pieces if p["status"] == "travado"],
     }

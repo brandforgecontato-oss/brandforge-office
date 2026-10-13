@@ -36,6 +36,8 @@ import { NewsTickerMode } from "./whiteboard/NewsTickerMode";
 import { CoffeeMode } from "./whiteboard/CoffeeMode";
 import { HeatMapMode } from "./whiteboard/HeatMapMode";
 import { KanbanMode } from "./whiteboard/KanbanMode";
+import { PlacarKanbanMode } from "./whiteboard/PlacarKanbanMode";
+import { useBrandforgeStore } from "@/stores/brandforgeStore";
 import { MODE_INFO } from "./whiteboard/WhiteboardModeRegistry";
 
 // ============================================================================
@@ -46,6 +48,8 @@ interface WhiteboardFrameProps {
   children: ReactNode;
   onPointerDown: () => void;
   mode: WhiteboardMode;
+  /** Troca o título do cabeçalho (ex.: "PLACAR" no escritório BrandForge). */
+  titleOverride?: string;
 }
 
 /** Marker colors drawn in the whiteboard tray (red, green, blue). */
@@ -55,6 +59,7 @@ function WhiteboardFrame({
   children,
   onPointerDown,
   mode,
+  titleOverride,
 }: WhiteboardFrameProps): ReactNode {
   const drawWhiteboard = useCallback((g: Graphics) => {
     g.clear();
@@ -99,7 +104,7 @@ function WhiteboardFrame({
       {/* Header - rendered at 2x for sharpness */}
       <pixiContainer x={165} y={22} scale={0.5}>
         <pixiText
-          text={`${modeInfo.icon} ${modeInfo.name}`}
+          text={`${modeInfo.icon} ${titleOverride ?? modeInfo.name}`}
           anchor={0.5}
           style={{
             fontFamily: '"Courier New", monospace',
@@ -147,6 +152,8 @@ export function Whiteboard({ todos }: WhiteboardProps): ReactNode {
   const setMode = useGameStore((s) => s.setWhiteboardMode);
   const agentsMap = useGameStore((s) => s.agents);
   const bossTask = useGameStore((s) => s.boss.currentTask);
+  // No escritório BrandForge o modo Kanban mostra o placar de aprovação das peças.
+  const isOfficeSession = useBrandforgeStore((s) => s.isOfficeSession);
 
   // Keyboard hotkeys: T = Todo List (0), B = Background Tasks (1), 0-9 = modes
   useEffect(() => {
@@ -231,14 +238,24 @@ export function Whiteboard({ todos }: WhiteboardProps): ReactNode {
       case 10:
         return <HeatMapMode data={whiteboardData} />;
       case 11:
-        return <KanbanMode data={whiteboardData} />;
+        return isOfficeSession ? (
+          <PlacarKanbanMode />
+        ) : (
+          <KanbanMode data={whiteboardData} />
+        );
       default:
         return <TodoListMode todos={todos} />;
     }
   };
 
   return (
-    <WhiteboardFrame onPointerDown={handleClick} mode={whiteboardMode}>
+    <WhiteboardFrame
+      onPointerDown={handleClick}
+      mode={whiteboardMode}
+      titleOverride={
+        isOfficeSession && whiteboardMode === 11 ? "PLACAR" : undefined
+      }
+    >
       {renderMode()}
     </WhiteboardFrame>
   );
