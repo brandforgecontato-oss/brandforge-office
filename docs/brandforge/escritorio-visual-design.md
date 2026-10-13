@@ -1,5 +1,7 @@
 # Escritório visual BrandForge: redesenho (Fase 5b)
 
+**Status: implementado em 13/10/2026** (etapas 1, 2 e 3 concluídas e commitadas). O que mudou em relação ao desenho: o clique nos avatares exigiu corrigir o letterbox do canvas (classe `brandforge-canvas`), e as falas dos balões e dos estados foram traduzidas para português.
+
 Aprovado pelo Silvestre em 13/10/2026 (conversa), com autorização para executar todas as etapas
 sem novas confirmações.
 

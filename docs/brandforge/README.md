@@ -12,6 +12,7 @@ O fork **não contém agentes nem produção**: ele só observa o Claude Code po
 | `backend/app/brandforge/` | elenco, chat, debate, placar |
 | `backend/app/api/routes/brandforge.py` | rotas `/api/v1/brandforge/...` |
 | `frontend/src/components/brandforge/` | doca (Chat, Debate, Placar), cartões, painéis |
+| `frontend/src/components/brandforge/scene/` | a cena: planta, postos, avatares, trajetos (`layout.ts`, `avatars.ts`, `route.ts`) |
 | `frontend/src/stores/{brandforge,chat,debate,placar}Store.ts` | estado da interface |
 | `iniciar-escritorio.ps1`, `instalar-hooks-escritorio.ps1` | uso no Windows (sem make nem tmux) |
 
@@ -43,10 +44,16 @@ Bash**. A variável `CLAUDE_OFFICE_STRIP_PREFIXES` faz o painel mostrar o projet
 
 ## O que aparece na tela
 
-- **Personagens.** A sessão do escritório tem o Orquestrador como chefe (dourado). Cada subagente
-  é identificado pelo nome do arquivo do agente (`critico`, `roteirista`...) e tem nome e cor fixos
-  (`backend/app/brandforge/roster.py`). Clique no personagem para ver o cartão: nome, função,
-  inspiração e modelo.
+- **A cena** (Fase 5b). Planta com 6 salas ligadas por um corredor: Orquestrador, debate (mesa redonda),
+  pesquisa e estratégia, roteiro e texto, produção visual, revisão e entrega. Cada um dos 11 agentes tem
+  posto fixo e aparece sempre: apagado quando não está no escritório, aceso (anel dourado que pulsa e a
+  tarefa do momento) quando trabalha, âmbar quando espera uma permissão. Quem não é do elenco aparece como
+  "visitante" no corredor. Quando o Crítico trabalha (ou há um debate recente em andamento), o Orquestrador
+  e o Crítico caminham até a mesa de debate, que brilha, e voltam depois. O placar fica num quadro na parede
+  da sala do Orquestrador. Clique no avatar para ver o cartão: nome, função, inspiração e modelo. Tudo é
+  desenhado por código (sem imagens), em `frontend/src/components/brandforge/scene/`; só aparece na sessão
+  do escritório (as demais sessões mantêm a cena original do Claude Office). O desenho completo está em
+  [escritorio-visual-design.md](escritorio-visual-design.md).
 - **Chat** (botão *Chat*). Fala com o Orquestrador. O backend roda
   `claude -p --agent orquestrador --output-format stream-json --resume <id>` na pasta do escritório;
   cada fala dele chega ao chat assim que sai e aparece em balão sobre o chefe. A mesma conversa
