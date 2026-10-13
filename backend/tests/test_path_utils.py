@@ -10,6 +10,9 @@ from app.core.path_utils import (
     truncate_long_words,
 )
 
+# str(Path("/home/user")) é "\home\user" no Windows: o texto das entradas tem de usar a mesma forma.
+HOME = str(Path("/home/user"))
+
 
 class TestCompressPath:
     """Tests for compress_path function."""
@@ -27,7 +30,7 @@ class TestCompressPath:
     def test_home_directory_replaced_with_tilde(self) -> None:
         """Home directory should be replaced with ~."""
         with patch.object(Path, "home", return_value=Path("/home/user")):
-            result = compress_path("/home/user/projects/file.txt")
+            result = compress_path(f"{HOME}/projects/file.txt")
             assert result == "~/projects/file.txt"
 
     def test_long_path_truncated_from_beginning(self) -> None:
@@ -70,14 +73,14 @@ class TestCompressPathsInText:
     def test_home_path_replaced_in_text(self) -> None:
         """Home directory paths in text should be replaced with ~."""
         with patch.object(Path, "home", return_value=Path("/home/user")):
-            text = "Reading file /home/user/projects/test.py"
+            text = f"Reading file {HOME}/projects/test.py"
             result = compress_paths_in_text(text)
             assert result == "Reading file ~/projects/test.py"
 
     def test_multiple_home_paths_replaced(self) -> None:
         """Multiple home paths should all be replaced."""
         with patch.object(Path, "home", return_value=Path("/home/user")):
-            text = "Copying /home/user/a.txt to /home/user/b.txt"
+            text = f"Copying {HOME}/a.txt to {HOME}/b.txt"
             result = compress_paths_in_text(text)
             assert result == "Copying ~/a.txt to ~/b.txt"
 

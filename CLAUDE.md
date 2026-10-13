@@ -32,6 +32,15 @@ bun run build      # Build plugin
 bun run typecheck  # Type check
 ```
 
+## Escritório BrandForge (este fork)
+
+Este fork também mostra o escritório de agentes da BrandForge (repositório irmão `escritorio_marketingBF`):
+elenco fixo com cartões, chat com o Orquestrador, debate em balões e placar de aprovação.
+Tudo isso fica em `backend/app/brandforge/`, `frontend/src/components/brandforge/` e nas stores
+`brandforge`/`chat`/`debate`/`placar`. No Windows não há `make` nem `tmux`: use
+`.\iniciar-escritorio.ps1` e `.\instalar-hooks-escritorio.ps1`. Detalhes em
+[docs/brandforge/README.md](docs/brandforge/README.md).
+
 ## Development Workflow
 
 **Preferred:** Use `make dev-tmux` - creates separate windows for backend/frontend.
