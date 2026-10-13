@@ -78,6 +78,7 @@ import {
 import { BossSprite, BossBubble, MobileBoss } from "./BossSprite";
 import { useNavigationStore } from "@/stores/navigationStore";
 import { useBrandforgeStore } from "@/stores/brandforgeStore";
+import { BrandforgeScene } from "@/components/brandforge/scene/BrandforgeScene";
 import { LOBBY_FLOOR_ID } from "@/types/navigation";
 import { ELEVATOR_POSITION, isInElevatorZone } from "@/systems/queuePositions";
 import { TrashCanSprite } from "./TrashCanSprite";
@@ -357,8 +358,11 @@ export function OfficeGame(): ReactNode {
               {/* Loading screen - shown while sprites are loading */}
               {!spritesLoaded && <LoadingScreen />}
 
+              {/* Escritório BrandForge: cena própria (planta com salas e avatares planos) */}
+              {spritesLoaded && isOfficeSession && <BrandforgeScene />}
+
               {/* Office content - hidden while loading */}
-              {spritesLoaded && (
+              {spritesLoaded && !isOfficeSession && (
                 <>
                   {/* Floor and walls */}
                   <OfficeBackground floorTileTexture={textures.floorTile} />

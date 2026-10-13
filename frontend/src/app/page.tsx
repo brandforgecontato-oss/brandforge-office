@@ -527,7 +527,7 @@ export default function V2TestPage(): React.ReactNode {
 
           <div
             data-tour-id="game-canvas"
-            className="flex-grow border border-slate-800 rounded-lg shadow-2xl bg-slate-900 overflow-hidden relative"
+            className="flex-grow border border-slate-800 rounded-lg shadow-2xl bg-slate-950 overflow-hidden relative"
           >
             <OfficeGame />
           </div>
