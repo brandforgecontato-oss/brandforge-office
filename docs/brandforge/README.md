@@ -51,7 +51,8 @@ Bash**. A variável `CLAUDE_OFFICE_STRIP_PREFIXES` faz o painel mostrar o projet
   `claude -p --agent orquestrador --output-format stream-json --resume <id>` na pasta do escritório;
   cada fala dele chega ao chat assim que sai e aparece em balão sobre o chefe. A mesma conversa
   continua entre mensagens (o id da sessão fica em `backend/brandforge_chat.json`, fora do git).
-  *Nova conversa* zera o histórico e a sessão. Uma mensagem por vez.
+  *Nova conversa* zera o histórico e a sessão; se o Orquestrador estiver trabalhando, o botão vira
+  *Parar e nova conversa* e interrompe o Claude Code. Uma mensagem por vez.
 - **Debate** (botão *Debate*). Lê `saida/<peça>/debate.md` e mostra, rodada por rodada, as objeções
   do Crítico (com gravidade e critério), as respostas do Orquestrador (ACEITAR, REBATER, ASSUMIR
   RISCO) e o veredito. Também aparecem em balões sobre o Orquestrador e o Crítico quando eles estão

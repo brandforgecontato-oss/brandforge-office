@@ -91,10 +91,14 @@ export default function ChatPanel(): ReactNode {
         <span className="text-sm font-bold text-amber-400">Orquestrador</span>
         <button
           onClick={() => void newConversation()}
-          disabled={busy}
-          className="text-[11px] text-neutral-500 hover:text-neutral-300 disabled:opacity-40"
+          title={
+            busy
+              ? "Interrompe o Orquestrador e esquece esta conversa"
+              : "Esquece esta conversa e começa outra"
+          }
+          className={`text-[11px] ${busy ? "text-red-400 hover:text-red-300" : "text-neutral-500 hover:text-neutral-300"}`}
         >
-          Nova conversa
+          {busy ? "Parar e nova conversa" : "Nova conversa"}
         </button>
       </div>
 

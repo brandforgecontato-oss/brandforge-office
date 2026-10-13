@@ -173,6 +173,15 @@ describe("ChatPanel", () => {
     expect(html).toContain("Orquestrador trabalhando");
   });
 
+  it("com o Orquestrador trabalhando, o botão vira 'Parar e nova conversa'", () => {
+    useChatStore.setState({ busy: true });
+    expect(renderToString(createElement(ChatPanel))).toContain(
+      "Parar e nova conversa",
+    );
+    useChatStore.setState({ busy: false });
+    expect(renderToString(createElement(ChatPanel))).toContain("Nova conversa");
+  });
+
   it("mostra o erro, quando há", () => {
     useChatStore.setState({ error: "O chat precisa do token da sessão." });
     const html = renderToString(createElement(ChatPanel));

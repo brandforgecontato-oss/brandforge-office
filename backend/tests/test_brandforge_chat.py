@@ -319,3 +319,27 @@ def test_delete_zera_a_conversa(api: TestClient) -> None:
     resp = api.delete("/api/v1/brandforge/chat", headers=_headers())
     assert resp.status_code == 200
     assert api.get("/api/v1/brandforge/chat").json()["messages"] == []
+
+
+@pytest.mark.asyncio
+async def test_nova_conversa_interrompe_o_processo_em_andamento(service: ChatService) -> None:
+    await service.send("DEMORAR bastante")
+    await asyncio.sleep(0.5)  # o processo já subiu
+    service.reset()
+    await _wait_idle(service, timeout=1.2)  # bem antes dos 1,5 s do script
+    # depois de interrompido, nada da conversa antiga volta (nem "O Claude Code falhou")
+    assert service.messages == []
+    assert service.session_id is None
+    assert service.busy is False
+
+
+@pytest.mark.asyncio
+async def test_depois_de_interromper_o_chat_aceita_nova_mensagem(service: ChatService) -> None:
+    await service.send("DEMORAR bastante")
+    await asyncio.sleep(0.5)
+    service.reset()
+    await _wait_idle(service, timeout=3)
+    await service.send("recomeçando")
+    await _wait_idle(service)
+    assert [m.role for m in service.messages][0] == "usuario"
+    assert any(m.role == "orquestrador" for m in service.messages)

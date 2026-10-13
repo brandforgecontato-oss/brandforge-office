@@ -154,6 +154,10 @@ class ChatService:
         self.permission_mode = permission_mode
         self._lock = threading.Lock()
         self._busy = False
+        self._process: subprocess.Popen[str] | None = None
+        # Cada "Nova conversa" abre uma geração nova; uma execução antiga que ainda esteja
+        # terminando não escreve mais nada no chat.
+        self._generation = 0
         self._next_id = 1
         self.messages: list[ChatMessage] = []
         self.session_id: str | None = None
@@ -185,8 +189,10 @@ class ChatService:
         except OSError as exc:
             logger.warning("Não foi possível salvar o chat: %s", exc)
 
-    def _add(self, role: str, text: str) -> ChatMessage:
+    def _add(self, role: str, text: str, generation: int | None = None) -> ChatMessage | None:
         with self._lock:
+            if generation is not None and generation != self._generation:
+                return None
             message = ChatMessage(
                 id=self._next_id,
                 role=role,
@@ -205,11 +211,23 @@ class ChatService:
             return [m for m in self.messages if m.id > after]
 
     def reset(self) -> None:
-        """Começa uma conversa nova (esquece o histórico e a sessão do Claude Code)."""
+        """Começa uma conversa nova (esquece o histórico e a sessão do Claude Code).
+
+        Se o Orquestrador ainda estiver trabalhando, o processo do Claude Code é interrompido
+        e o chat já fica livre para uma nova mensagem.
+        """
         with self._lock:
+            self._generation += 1
             self.messages = []
             self.session_id = None
+            self._busy = False
+            process = self._process
             self._save()
+        if process is not None and process.poll() is None:
+            process.terminate()
+
+    def _current(self, generation: int) -> bool:
+        return generation == self._generation
 
     # --- envio --------------------------------------------------------------------------------
 
@@ -221,28 +239,33 @@ class ChatService:
             if self._busy:
                 raise ChatBusyError("O Orquestrador ainda está trabalhando na mensagem anterior.")
             self._busy = True
+            generation = self._generation
         message = self._add("usuario", text)
+        assert message is not None
         threading.Thread(
-            target=self._run, args=(text,), name="brandforge-chat", daemon=True
+            target=self._run, args=(text, generation), name="brandforge-chat", daemon=True
         ).start()
         return message
 
-    def _run(self, prompt: str) -> None:
+    def _run(self, prompt: str, generation: int) -> None:
         try:
-            self._run_claude(prompt)
+            self._run_claude(prompt, generation)
         except Exception as exc:  # o chat nunca pode derrubar o backend
             logger.exception("Falha no chat com o Orquestrador")
-            self._add("sistema", f"Erro inesperado no chat: {exc}")
+            self._add("sistema", f"Erro inesperado no chat: {exc}", generation)
         finally:
-            self._busy = False
+            with self._lock:
+                if self._current(generation):
+                    self._busy = False
 
-    def _run_claude(self, prompt: str) -> None:
+    def _run_claude(self, prompt: str, generation: int) -> None:
         cwd = self.office_dir()
         if not cwd.is_dir():
             self._add(
                 "sistema",
                 f"Pasta do escritório não encontrada: {cwd}. "
                 "Ajuste BRANDFORGE_OFFICE_DIR no backend.",
+                generation,
             )
             return
 
@@ -264,9 +287,23 @@ class ChatService:
             self._add(
                 "sistema",
                 f"Não consegui iniciar o Claude Code ({self.claude_command[0]}): {exc}",
+                generation,
             )
             return
 
+        with self._lock:
+            self._process = process
+            interrupted = not self._current(generation)  # reset() chegou antes do registro
+        if interrupted:
+            process.terminate()
+        try:
+            self._consume(process, prompt, generation)
+        finally:
+            with self._lock:
+                if self._process is process:
+                    self._process = None
+
+    def _consume(self, process: "subprocess.Popen[str]", prompt: str, generation: int) -> None:
         assert process.stdin is not None and process.stdout is not None
         try:
             process.stdin.write(prompt)
@@ -283,28 +320,30 @@ class ChatService:
                 if line.strip():
                     noise.append(line.strip())
                 continue
-            if event.session_id:
+            if event.session_id and self._current(generation):
                 self.session_id = event.session_id
                 self._save()
             for text in event.texts:
                 spoke = True
-                self._add("orquestrador", text)
+                self._add("orquestrador", text, generation)
             if event.final:
                 if event.is_error:
                     failure = event.result_text or "O Claude Code terminou com erro."
                 elif not spoke and event.result_text:
                     spoke = True
-                    self._add("orquestrador", event.result_text)
+                    self._add("orquestrador", event.result_text, generation)
 
         code = process.wait()
+        if not self._current(generation):
+            return  # conversa encerrada por "Nova conversa": nada mais a registrar
         if failure or code != 0:
             detail = failure or " ".join(noise) or f"código de saída {code}"
             # Uma sessão que não pode ser retomada precisa começar do zero na próxima vez.
             self.session_id = None
             self._save()
-            self._add("sistema", f"O Claude Code falhou: {detail}")
+            self._add("sistema", f"O Claude Code falhou: {detail}", generation)
         elif not spoke:
-            self._add("sistema", "O Orquestrador terminou sem dizer nada.")
+            self._add("sistema", "O Orquestrador terminou sem dizer nada.", generation)
 
 
 _service: ChatService | None = None
