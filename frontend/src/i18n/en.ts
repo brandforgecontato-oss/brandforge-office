@@ -106,6 +106,7 @@ const en = {
   "sessions.unknownProject": "Unknown Project",
   "sessions.deleteSession": "Delete session",
   "sessions.events": "events",
+  "sessions.olderSessions": "older sessions",
   "sessions.olderSessions_one": "{count} older session",
   "sessions.olderSessions_other": "{count} older sessions",
   "sessions.events_one": "{count} event",
