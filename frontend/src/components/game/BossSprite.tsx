@@ -16,6 +16,8 @@ import { ICON_MAP } from "./shared/iconMap";
 import { drawBubble, drawIconBadge } from "./shared/drawBubble";
 import { drawRightArm, drawLeftArm } from "./shared/drawArm";
 import { truncateBubbleText } from "@/utils/bubbleText";
+import { useAttentionStore } from "@/stores/attentionStore";
+import { usePreferencesStore } from "@/stores/preferencesStore";
 
 // ============================================================================
 // TYPES
@@ -253,6 +255,22 @@ function BossSpriteComponent({
     [bossArmParams, leftArmOffset],
   );
 
+  // Clique no chefe abre o cartão (no escritório BrandForge: o do Orquestrador).
+  const clickToFocusEnabled = usePreferencesStore((s) => s.clickToFocusEnabled);
+  const openFocusPopup = useAttentionStore((s) => s.openFocusPopup);
+  const handleBossTap = useCallback(() => {
+    if (!clickToFocusEnabled) return;
+    const canvas = document.querySelector(".pixi-canvas-container canvas");
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const scale = rect.width / 1280; // CANVAS_WIDTH = 1280
+    openFocusPopup(
+      "boss",
+      rect.left + position.x * scale,
+      rect.top + position.y * scale,
+    );
+  }, [clickToFocusEnabled, position.x, position.y, openFocusPopup]);
+
   const bubbleOffset = -80;
 
   return (
@@ -272,7 +290,12 @@ function BossSpriteComponent({
 
       {/* Boss character (body + accessories) - hidden when away from desk */}
       {!isAway && (
-        <pixiContainer y={6}>
+        <pixiContainer
+          y={6}
+          eventMode={clickToFocusEnabled ? "static" : "auto"}
+          cursor={clickToFocusEnabled ? "pointer" : undefined}
+          onPointerTap={handleBossTap}
+        >
           {/* Boss body - in front of chair, behind desk */}
           <pixiGraphics draw={drawBossCallback} />
 

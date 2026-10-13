@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from enum import Enum, auto
 from typing import Any, cast
 
+from app.brandforge.roster import apply_identity
 from app.core.path_utils import compress_path, compress_paths_in_text, truncate_long_words
 from app.core.quotes import get_random_job_completion_quote
 from app.core.summary_service import get_summary_service
@@ -815,7 +816,7 @@ class StateMachine:
 
         task = data.task_description or data.agent_name or None
 
-        return Agent(
+        agent = Agent(
             id=agent_id,
             name=short_name,
             color=color,
@@ -825,3 +826,6 @@ class StateMachine:
             bubble=None,
             current_task=task,
         )
+        # Agentes do escritório BrandForge têm nome, cor e cartão fixos.
+        apply_identity(agent, data.agent_type)
+        return agent

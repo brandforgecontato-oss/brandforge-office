@@ -38,6 +38,8 @@ export type AgentSlice = {
       backendState: BackendAgentState;
       name: string | null;
       currentTask: string | null;
+      agentType?: string | null;
+      color?: string;
     },
   ) => void;
   updateAgentQueueInfo: (
@@ -90,6 +92,7 @@ export const createAgentSlice: StateCreator<GameStore, [], [], AgentSlice> = (
           backendState: backendAgent.state,
           currentTask: backendAgent.currentTask ?? null,
           characterType: backendAgent.characterType ?? null,
+          agentType: backendAgent.agentType ?? null,
           parentSessionId: backendAgent.parentSessionId ?? null,
           parentId: backendAgent.parentId ?? null,
           phase: "arriving",
@@ -149,6 +152,8 @@ export const createAgentSlice: StateCreator<GameStore, [], [], AgentSlice> = (
       patchAgent(agentId, (agent) => ({
         backendState: meta.backendState,
         name: meta.name ?? agent.name,
+        agentType: meta.agentType ?? agent.agentType,
+        color: meta.color ?? agent.color,
         // `??` (not `||`) so an explicit empty-string currentTask clears the
         // previous task — only null/undefined fall back. See QA-012.
         currentTask: meta.currentTask ?? agent.currentTask,

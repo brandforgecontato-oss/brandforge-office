@@ -48,6 +48,7 @@ import { TourOverlay } from "@/components/tour/TourOverlay";
 import CommandBar from "@/components/attention/CommandBar";
 import AttentionToasts from "@/components/attention/AttentionToasts";
 import AgentPopup from "@/components/attention/AgentPopup";
+import { useBrandforgeStore } from "@/stores/brandforgeStore";
 import { useAttentionStore } from "@/stores/attentionStore";
 import { usePreferencesStore } from "@/stores/preferencesStore";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -126,6 +127,20 @@ export default function V2TestPage(): React.ReactNode {
   // ------------------------------------------------------------------
   const { sessions, sessionsLoading, sessionId, setSessionId, fetchSessions } =
     useSessions(showStatus);
+
+  // Escritório BrandForge: elenco fixo + reconhecimento da sessão do escritório.
+  const fetchRoster = useBrandforgeStore((s) => s.fetchRoster);
+  const setCurrentProjectRoot = useBrandforgeStore(
+    (s) => s.setCurrentProjectRoot,
+  );
+  useEffect(() => {
+    void fetchRoster();
+  }, [fetchRoster]);
+  const currentProjectRoot =
+    sessions.find((s) => s.id === sessionId)?.projectRoot ?? null;
+  useEffect(() => {
+    setCurrentProjectRoot(currentProjectRoot);
+  }, [currentProjectRoot, setCurrentProjectRoot]);
 
   const {
     handleSessionSelect,

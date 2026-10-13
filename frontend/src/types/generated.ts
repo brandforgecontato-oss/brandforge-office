@@ -8,6 +8,7 @@
 export type Id = string;
 export type Nativeid = string | null;
 export type Name = string | null;
+export type Agenttype = string | null;
 export type Color = string;
 export type Number = number;
 /**
@@ -477,6 +478,7 @@ export interface Agent {
   id: Id;
   nativeId?: Nativeid;
   name?: Name;
+  agentType?: Agenttype;
   color: Color;
   number: Number;
   state: AgentState;

@@ -8,6 +8,7 @@ Outputs ../frontend/src/types/generated.ts via json-schema-to-typescript.
 """
 
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -110,11 +111,17 @@ schema_path.write_text(json.dumps(full_schema, indent=2), encoding="utf-8")
 
 # Convert to TypeScript
 output_path = Path(__file__).parent.parent / "frontend" / "src" / "types" / "generated.ts"
+# Prefer bunx; without bun (e.g. Windows) use the json2ts installed in frontend/node_modules.
+_frontend_dir = Path(__file__).parent.parent / "frontend"
+if shutil.which("bunx"):
+    _runner = ["bunx", "json2ts"]
+else:
+    _local = shutil.which("json2ts", path=str(_frontend_dir / "node_modules" / ".bin"))
+    _runner = [_local] if _local else ["npx", "--no-install", "json2ts"]
 try:
     result = subprocess.run(
         [
-            "bunx",
-            "json2ts",
+            *_runner,
             "--input",
             str(schema_path),
             "--output",

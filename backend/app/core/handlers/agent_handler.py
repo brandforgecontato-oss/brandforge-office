@@ -15,6 +15,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from app.brandforge.roster import apply_identity
 from app.core.broadcast_service import broadcast_state
 from app.core.jsonl_parser import get_first_user_prompt, get_last_assistant_response
 from app.core.state_machine import StateMachine, resolve_agent_for_stop
@@ -159,6 +160,8 @@ async def handle_subagent_info(
             # Link and enrich agents that have not yet been assigned a native_id.
             if agent.native_id is None:
                 agent.native_id = native_agent_id
+                if agent.agent_type is None:
+                    apply_identity(agent, event.data.agent_type)
                 logger.info(f"Linked agent {agent_id} to native ID {native_agent_id}")
                 await enrich_agent_from_transcript(
                     agent,
@@ -307,6 +310,9 @@ async def enrich_agent_with_summaries(
     if task_source:
         summarized = await summary_service.summarize_agent_task(task_source)
         agent.current_task = summarized or None
+
+    # Agentes do escritório BrandForge mantêm nome e cor fixos, mesmo com resumos ligados.
+    apply_identity(agent, event_data.agent_type)
 
     logger.debug(f"Enriched agent {agent.id}: name='{agent.name}', task='{agent.current_task}'")
 

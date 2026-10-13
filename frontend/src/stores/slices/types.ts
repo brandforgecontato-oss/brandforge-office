@@ -65,6 +65,8 @@ export interface AgentAnimationState {
   backendState: BackendAgentState;
   currentTask: string | null;
   characterType: string | null;
+  /** Tipo do subagente (ex.: "critico"); identifica o agente do escritório BrandForge. */
+  agentType: string | null;
   parentSessionId: string | null;
   parentId: string | null;
 

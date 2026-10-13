@@ -55,6 +55,9 @@ class Agent(BaseModel):
     id: str
     native_id: str | None = None  # Native Claude agent ID (e.g., "a5a60c7")
     name: str | None = None
+    # Tipo do subagente informado pelo Claude Code (ex.: "critico"); no escritório
+    # BrandForge identifica o agente do elenco (nome, cor e cartão fixos).
+    agent_type: str | None = None
     color: str
     number: int
     state: AgentState

@@ -106,6 +106,17 @@ class Settings(BaseSettings):
     # endpoints always require an API key even in the default configuration.
     _auto_api_key: str = secrets.token_hex(32)
 
+    # --- Escritório BrandForge -------------------------------------------------
+    # Pasta do repositório do escritório (agentes, saida/, marca/...). Vazio = a pasta
+    # irmã ``escritorio_marketingBF`` ao lado deste repositório.
+    BRANDFORGE_OFFICE_DIR: str = ""
+    # Executável do Claude Code usado pelo chat com o Orquestrador.
+    BRANDFORGE_CLAUDE_PATH: str = "claude"
+    # Modo de permissões do Claude Code no chat (modo não interativo não tem
+    # como pedir autorização). ``acceptEdits`` libera edições de arquivos; o resto
+    # segue a lista de permissões do .claude/settings.json do escritório.
+    BRANDFORGE_CHAT_PERMISSION_MODE: str = "acceptEdits"
+
     # Rich tracebacks render local variables and full filesystem paths into logs.
     # Useful in development; disable for shared/production deployments (SEC-006).
     LOG_RICH_TRACEBACKS: bool = True

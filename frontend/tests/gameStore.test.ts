@@ -566,3 +566,45 @@ describe("updateAgentMeta", () => {
   // silently keeping the previous task). QA-012 switched to `??` and added
   // the explicit empty-string test above to pin the corrected behavior.
 });
+
+// ---------------------------------------------------------------------------
+// Escritório BrandForge: identidade fixa do agente (agentType + cor)
+// ---------------------------------------------------------------------------
+
+describe("identidade do agente do escritório BrandForge", () => {
+  it("addAgent guarda o agentType vindo do backend", () => {
+    addAgent("C", { name: "Crítico", agentType: "critico" });
+    expect(useGameStore.getState().agents.get("C")?.agentType).toBe("critico");
+  });
+
+  it("agente sem agentType fica com null", () => {
+    addAgent("D");
+    expect(useGameStore.getState().agents.get("D")?.agentType).toBeNull();
+  });
+
+  it("updateAgentMeta atualiza agentType e cor quando o backend os envia", () => {
+    addAgent("E", { name: "Algo", color: "#111111" });
+    useGameStore.getState().updateAgentMeta("E", {
+      backendState: "working",
+      name: "Revisor",
+      currentTask: null,
+      agentType: "revisor",
+      color: "#E2E8F0",
+    });
+    const agent = useGameStore.getState().agents.get("E");
+    expect(agent?.agentType).toBe("revisor");
+    expect(agent?.color).toBe("#E2E8F0");
+  });
+
+  it("updateAgentMeta sem agentType/cor preserva os atuais", () => {
+    addAgent("F", { agentType: "critico", color: "#EF4444" });
+    useGameStore.getState().updateAgentMeta("F", {
+      backendState: "working",
+      name: null,
+      currentTask: null,
+    });
+    const agent = useGameStore.getState().agents.get("F");
+    expect(agent?.agentType).toBe("critico");
+    expect(agent?.color).toBe("#EF4444");
+  });
+});

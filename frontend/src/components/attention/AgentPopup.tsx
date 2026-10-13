@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { useAttentionStore, selectFocusPopup } from "@/stores/attentionStore";
 import { useGameStore, selectSessionId } from "@/stores/gameStore";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useBrandforgeStore } from "@/stores/brandforgeStore";
+import AgentCard from "@/components/brandforge/AgentCard";
 import type { AgentAnimationState } from "@/stores/gameStore";
 
 const POPUP_WIDTH = 260;
@@ -17,6 +19,8 @@ export default function AgentPopup(): ReactNode {
   const agents = useGameStore((s) => s.agents);
   const boss = useGameStore((s) => s.boss);
   const sessionId = useGameStore(selectSessionId);
+  const roster = useBrandforgeStore((s) => s.roster);
+  const isOfficeSession = useBrandforgeStore((s) => s.isOfficeSession);
   const { t } = useTranslation();
 
   const handleFocusTerminal = useCallback(() => {
@@ -55,6 +59,17 @@ export default function AgentPopup(): ReactNode {
   if (y + 200 > vh - POPUP_MARGIN) y = vh - 200 - POPUP_MARGIN;
   if (y < POPUP_MARGIN) y = POPUP_MARGIN;
 
+  // Escritório BrandForge: o chefe da sessão do escritório é o Orquestrador e cada
+  // subagente do elenco tem cartão próprio (nome, função e inspiração).
+  const rosterSlug = isBoss
+    ? isOfficeSession
+      ? "orquestrador"
+      : null
+    : (agent?.agentType ?? null);
+  const rosterEntry = rosterSlug
+    ? (roster.find((r) => r.slug === rosterSlug) ?? null)
+    : null;
+
   const displayName = isBoss ? "Boss" : (agent?.name ?? focusPopup.agentId);
   const displayColor = isBoss ? "#f59e0b" : (agent?.color ?? "#888");
   const displayState = isBoss
@@ -76,43 +91,53 @@ export default function AgentPopup(): ReactNode {
         className="absolute bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl p-4"
         style={{ left: x, top: y, width: POPUP_WIDTH }}
       >
-        <div className="flex items-center gap-2 mb-3">
-          <div
-            className="w-3 h-3 rounded-full shrink-0"
-            style={{ backgroundColor: displayColor }}
+        {rosterEntry ? (
+          <AgentCard
+            entry={rosterEntry}
+            state={isBoss ? boss.backendState : agent?.backendState}
+            task={displayTask}
           />
-          <span className="text-white font-bold text-sm truncate flex-1">
-            {displayName}
-          </span>
-          {displayDesk !== null && (
-            <span className="text-neutral-500 text-[11px]">
-              {t("attention.popup.desk")} #{displayDesk}
-            </span>
-          )}
-        </div>
-
-        <div className="text-[12px] text-neutral-400 space-y-1 mb-3">
-          <div>
-            <span className="text-neutral-600">
-              {t("attention.popup.state")}:
-            </span>{" "}
-            {displayState}
-          </div>
-          {displayTask && (
-            <div className="truncate">
-              <span className="text-neutral-600">
-                {t("attention.popup.task")}:
-              </span>{" "}
-              {displayTask}
+        ) : (
+          <>
+            <div className="flex items-center gap-2 mb-3">
+              <div
+                className="w-3 h-3 rounded-full shrink-0"
+                style={{ backgroundColor: displayColor }}
+              />
+              <span className="text-white font-bold text-sm truncate flex-1">
+                {displayName}
+              </span>
+              {displayDesk !== null && (
+                <span className="text-neutral-500 text-[11px]">
+                  {t("attention.popup.desk")} #{displayDesk}
+                </span>
+              )}
             </div>
-          )}
-          <div>
-            <span className="text-neutral-600">
-              {t("attention.popup.type")}:
-            </span>{" "}
-            {displayType}
-          </div>
-        </div>
+
+            <div className="text-[12px] text-neutral-400 space-y-1 mb-3">
+              <div>
+                <span className="text-neutral-600">
+                  {t("attention.popup.state")}:
+                </span>{" "}
+                {displayState}
+              </div>
+              {displayTask && (
+                <div className="truncate">
+                  <span className="text-neutral-600">
+                    {t("attention.popup.task")}:
+                  </span>{" "}
+                  {displayTask}
+                </div>
+              )}
+              <div>
+                <span className="text-neutral-600">
+                  {t("attention.popup.type")}:
+                </span>{" "}
+                {displayType}
+              </div>
+            </div>
+          </>
+        )}
 
         <div className="flex gap-2">
           <button

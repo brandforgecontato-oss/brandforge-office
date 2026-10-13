@@ -188,6 +188,8 @@ export function reconcileState(state: GameState, ctx: ReconcilerContext): void {
         backendState: backendAgent.state,
         name: backendAgent.name ?? null,
         currentTask: backendAgent.currentTask ?? null,
+        agentType: backendAgent.agentType ?? null,
+        color: backendAgent.color,
       });
 
       // Enqueue bubbles for agents who are at their desk working.
