@@ -81,6 +81,8 @@ def create_hook_config(hook_cmd: str, hook_type: str) -> dict[str, Any]:
     """
     # Convert PascalCase to snake_case for the event type argument
     event_type = convert_camel_to_snake(hook_type)
+    if " " in hook_cmd and not hook_cmd.startswith(('"', "'")):
+        hook_cmd = f'"{hook_cmd}"'  # path with spaces (e.g. "Pc User") needs shell quoting
 
     config = {
         "type": "command",
@@ -124,20 +126,38 @@ def is_same_hook(entry1: dict[str, Any], entry2: dict[str, Any]) -> bool:
         return False
 
 
-def install_hooks(hook_cmd: str, dry_run: bool = False):
+def install_hooks(
+    hook_cmd: str,
+    dry_run: bool = False,
+    settings_path: Path | None = None,
+    env: dict[str, str] | None = None,
+):
     """Install hooks into settings.
 
     Args:
         hook_cmd: Path to the claude-office-hook command
         dry_run: If True, don't actually save changes
+        settings_path: settings.json to edit instead of the user-level one
+            (e.g. a project's ``.claude/settings.json``)
+        env: variables to merge into the settings ``env`` block
     """
-    settings_path = get_settings_path()
+    settings_path = settings_path or get_settings_path()
     print(f"Installing hooks to {settings_path}...")
 
     settings = load_settings(settings_path)
     hooks_config = settings.get("hooks", {})
 
     changes_made = False
+
+    if env:
+        env_config = settings.get("env", {})
+        for key, value in env.items():
+            if env_config.get(key) != value:
+                print(f"  [Env]  {key}={value}")
+                env_config[key] = value
+                changes_made = True
+        if changes_made:
+            settings["env"] = env_config
 
     for hook_type in HOOK_TYPES:
         new_entry = create_hook_config(hook_cmd, hook_type)
@@ -166,15 +186,18 @@ def install_hooks(hook_cmd: str, dry_run: bool = False):
         print("No changes needed.")
 
 
-def uninstall_hooks(_hook_cmd: str, dry_run: bool = False) -> None:
+def uninstall_hooks(
+    _hook_cmd: str, dry_run: bool = False, settings_path: Path | None = None
+) -> None:
     """Remove hooks from settings.
 
     Args:
         _hook_cmd: Path to the claude-office-hook command (unused, hooks identified by pattern)
         dry_run: If True, don't actually save changes
+        settings_path: settings.json to edit instead of the user-level one
     """
     del _hook_cmd  # Unused - hooks identified by pattern match
-    settings_path = get_settings_path()
+    settings_path = settings_path or get_settings_path()
     print(f"Uninstalling hooks from {settings_path}...")
 
     settings = load_settings(settings_path)
@@ -230,13 +253,28 @@ def main():
     parser.add_argument("action", choices=["install", "uninstall"], help="Action to perform")
     parser.add_argument("--dry-run", action="store_true", help="Don't save changes")
     parser.add_argument("--hook-cmd", help="Path to claude-office-hook command", required=True)
+    parser.add_argument(
+        "--settings",
+        type=Path,
+        default=None,
+        help="settings.json to edit (default: user-level ~/.claude/settings.json)",
+    )
+
+    parser.add_argument(
+        "--set-env",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="variable to merge into the settings env block (repeatable; install only)",
+    )
 
     args = parser.parse_args()
 
     if args.action == "install":
-        install_hooks(args.hook_cmd, args.dry_run)
+        env = dict(item.split("=", 1) for item in args.set_env)
+        install_hooks(args.hook_cmd, args.dry_run, args.settings, env)
     elif args.action == "uninstall":
-        uninstall_hooks(args.hook_cmd, args.dry_run)
+        uninstall_hooks(args.hook_cmd, args.dry_run, args.settings)
 
 
 if __name__ == "__main__":

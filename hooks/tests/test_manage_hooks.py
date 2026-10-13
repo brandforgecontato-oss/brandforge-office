@@ -86,3 +86,73 @@ def test_save_settings_preserves_oldest_backup_across_runs(tmp_path: Path) -> No
 def test_load_settings_returns_empty_for_missing_file(tmp_path: Path) -> None:
     """A fresh install (no settings.json) is still allowed: returns {}."""
     assert manage_hooks.load_settings(_settings_path(tmp_path)) == {}
+
+
+def test_install_into_explicit_settings_path_keeps_other_keys(tmp_path: Path) -> None:
+    """--settings grava os hooks num settings.json de projeto sem tocar no resto."""
+    project_settings = tmp_path / "projeto" / ".claude" / "settings.json"
+    project_settings.parent.mkdir(parents=True)
+    project_settings.write_text(
+        json.dumps(
+            {"env": {"X": "1"}, "hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": []}]}}
+        ),
+        encoding="utf-8",
+    )
+
+    manage_hooks.install_hooks(
+        '"D:/Pc User/hooks/.venv/Scripts/claude-office-hook.exe"',
+        settings_path=project_settings,
+    )
+
+    saved = json.loads(project_settings.read_text(encoding="utf-8"))
+    assert saved["env"] == {"X": "1"}
+    pre = saved["hooks"]["PreToolUse"]
+    assert pre[0] == {"matcher": "Bash", "hooks": []}  # hook existente preservado
+    commands = [h["hooks"][0]["command"] for h in pre[1:]]
+    assert commands == ['"D:/Pc User/hooks/.venv/Scripts/claude-office-hook.exe" pre_tool_use']
+
+
+def test_uninstall_from_explicit_settings_path(tmp_path: Path) -> None:
+    project_settings = tmp_path / "settings.json"
+    manage_hooks.install_hooks("claude-office-hook", settings_path=project_settings)
+    manage_hooks.uninstall_hooks("claude-office-hook", settings_path=project_settings)
+    saved = json.loads(project_settings.read_text(encoding="utf-8"))
+    assert saved["hooks"] == {}
+
+
+def test_install_sets_env_vars_in_settings(tmp_path: Path) -> None:
+    """--set-env grava variáveis em settings["env"] preservando as existentes."""
+    settings = tmp_path / "settings.json"
+    settings.write_text(json.dumps({"env": {"KEEP": "1"}}), encoding="utf-8")
+
+    manage_hooks.install_hooks(
+        "claude-office-hook", settings_path=settings, env={"CLAUDE_OFFICE_STRIP_PREFIXES": "a-,b-"}
+    )
+
+    saved = json.loads(settings.read_text(encoding="utf-8"))
+    assert saved["env"] == {"KEEP": "1", "CLAUDE_OFFICE_STRIP_PREFIXES": "a-,b-"}
+
+
+def test_install_env_is_idempotent(tmp_path: Path) -> None:
+    settings = tmp_path / "settings.json"
+    for _ in range(2):
+        manage_hooks.install_hooks("claude-office-hook", settings_path=settings, env={"A": "1"})
+    saved = json.loads(settings.read_text(encoding="utf-8"))
+    assert saved["env"] == {"A": "1"}
+    assert len(saved["hooks"]["Stop"]) == 1
+
+
+def test_hook_cmd_with_spaces_is_quoted_automatically(tmp_path: Path) -> None:
+    """Caminho com espaço (ex.: 'Pc User') precisa de aspas no comando do hook."""
+    settings = tmp_path / "settings.json"
+    manage_hooks.install_hooks("D:/Pc User/hooks/claude-office-hook.exe", settings_path=settings)
+    saved = json.loads(settings.read_text(encoding="utf-8"))
+    command = saved["hooks"]["Stop"][0]["hooks"][0]["command"]
+    assert command == '"D:/Pc User/hooks/claude-office-hook.exe" stop'
+
+
+def test_hook_cmd_already_quoted_is_kept(tmp_path: Path) -> None:
+    settings = tmp_path / "settings.json"
+    manage_hooks.install_hooks('"D:/Pc User/x.exe"', settings_path=settings)
+    saved = json.loads(settings.read_text(encoding="utf-8"))
+    assert saved["hooks"]["Stop"][0]["hooks"][0]["command"] == '"D:/Pc User/x.exe" stop'

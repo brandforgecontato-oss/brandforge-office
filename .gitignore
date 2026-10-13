@@ -113,3 +113,6 @@ frontend/public/sprites/paid/
 .superpowers
 docs/superpowers
 .cc2cc-session-id
+
+# Escritorio BrandForge (logs locais do iniciar-escritorio.ps1)
+.escritorio/
