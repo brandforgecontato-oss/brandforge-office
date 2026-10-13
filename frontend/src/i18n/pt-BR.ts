@@ -2,7 +2,7 @@ import type { TranslationKey } from "./en";
 
 const ptBR: Record<TranslationKey, string> = {
   // App
-  "app.title": "Visualizador do Escritório",
+  "app.title": "Escritório",
   "app.initializingSystems": "Inicializando Sistemas...",
 
   // Header Controls
@@ -108,6 +108,8 @@ const ptBR: Record<TranslationKey, string> = {
   "sessions.unknownProject": "Projeto Desconhecido",
   "sessions.deleteSession": "Excluir sessão",
   "sessions.events": "eventos",
+  "sessions.olderSessions_one": "{count} sessão antiga",
+  "sessions.olderSessions_other": "{count} sessões antigas",
   "sessions.events_one": "{count} evento",
   "sessions.events_other": "{count} eventos",
   "sessions.expandSidebar": "Expandir barra lateral",

@@ -62,20 +62,10 @@ describe("shouldShowToast", () => {
   });
 
   describe("stop", () => {
-    // `stop` shares the error pref with `error` — this is the original
-    // `filterMap` mapping, preserved exactly.
-    it("shares toastFilterError with error (true ⇒ shown)", () => {
-      expect(shouldShowToast("stop", prefsAll(true))).toBe(true);
-    });
-    it("shares toastFilterError with error (false ⇒ suppressed)", () => {
-      const prefs = prefsAll(true);
-      prefs.toastFilterError = false;
-      expect(shouldShowToast("stop", prefs)).toBe(false);
-    });
-    it("is NOT affected by toastFilterPermission", () => {
-      const prefs = prefsAll(true);
-      prefs.toastFilterPermission = false; // unrelated toggle
-      expect(shouldShowToast("stop", prefs)).toBe(true);
+    // BrandForge: `stop` dispara a cada fim de turno do Orquestrador e só enchia a tela de avisos.
+    it("nunca gera aviso, qualquer que seja a preferência", () => {
+      expect(shouldShowToast("stop", prefsAll(true))).toBe(false);
+      expect(shouldShowToast("stop", prefsAll(false))).toBe(false);
     });
   });
 
@@ -136,7 +126,7 @@ describe("shouldShowToast", () => {
       } as unknown as PreferencesState;
       // Every attention type should pass the `!== false` gate under undefined.
       expect(shouldShowToast("error", prefs)).toBe(true);
-      expect(shouldShowToast("stop", prefs)).toBe(true);
+      expect(shouldShowToast("stop", prefs)).toBe(false); // BrandForge: stop nunca avisa
       expect(shouldShowToast("permission_request", prefs)).toBe(true);
       expect(shouldShowToast("task_completed", prefs)).toBe(true);
       expect(shouldShowToast("subagent_start", prefs)).toBe(true);

@@ -17,6 +17,7 @@ import { GitStatusPanel } from "@/components/layout/GitStatusPanel";
 import type { Session } from "@/hooks/useSessions";
 import { useDragResize } from "@/hooks/useDragResize";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useBrandforgeStore } from "@/stores/brandforgeStore";
 
 // ============================================================================
 // CONSTANTS
@@ -219,6 +220,7 @@ export function SessionSidebar({
     edge: "down",
   });
 
+  const isOfficeSession = useBrandforgeStore((s) => s.isOfficeSession);
   const isDragging = isWidthDragging || isHeightDragging;
 
   const groups = groupSessionsByProject(sessions);
@@ -251,8 +253,10 @@ export function SessionSidebar({
         <>
           {/* Session Browser */}
           <div
-            className="bg-slate-950 border border-slate-800 rounded-lg overflow-hidden flex-shrink-0 flex flex-col"
-            style={{ height: sessionsHeight }}
+            className={`bg-slate-950 border border-slate-800 rounded-lg overflow-hidden flex flex-col ${
+              isOfficeSession ? "flex-grow min-h-0" : "flex-shrink-0"
+            }`}
+            style={isOfficeSession ? undefined : { height: sessionsHeight }}
           >
             <div className="bg-slate-900 px-3 py-2 border-b border-slate-800 flex items-center gap-2 flex-shrink-0">
               <History size={14} className="text-purple-500" />
@@ -381,8 +385,9 @@ export function SessionSidebar({
                               ) : (
                                 <ChevronRight size={10} />
                               )}
-                              {rest.length} older session
-                              {rest.length !== 1 ? "s" : ""}
+                              {t("sessions.olderSessions", {
+                                count: rest.length,
+                              })}
                             </button>
 
                             {isExpanded &&
@@ -446,19 +451,24 @@ export function SessionSidebar({
             </div>
           </div>
 
-          {/* Vertical Resize Handle (sessions ↕ git status) */}
-          <div
-            className="flex-shrink-0 h-3 cursor-ns-resize flex items-center justify-center group -my-1"
-            onMouseDown={handleHeightDragStart}
-            title={t("sessions.dragToResize")}
-          >
-            <div className="w-10 h-1 rounded-full bg-slate-700 group-hover:bg-purple-500 group-active:bg-purple-400 transition-colors" />
-          </div>
+          {/* Vertical Resize Handle (sessions ↕ git status). No escritório BrandForge o
+              painel de Git não serve, então sessões ocupam a coluna toda. */}
+          {!isOfficeSession && (
+            <>
+              <div
+                className="flex-shrink-0 h-3 cursor-ns-resize flex items-center justify-center group -my-1"
+                onMouseDown={handleHeightDragStart}
+                title={t("sessions.dragToResize")}
+              >
+                <div className="w-10 h-1 rounded-full bg-slate-700 group-hover:bg-purple-500 group-active:bg-purple-400 transition-colors" />
+              </div>
 
-          {/* Git Status Panel */}
-          <div className="flex-grow min-h-0">
-            <GitStatusPanel />
-          </div>
+              {/* Git Status Panel */}
+              <div className="flex-grow min-h-0">
+                <GitStatusPanel />
+              </div>
+            </>
+          )}
         </>
       )}
 

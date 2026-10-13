@@ -1,30 +1,51 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #17140f;
+  --foreground: #f1e9d8;
+}
+
+/* Identidade BrandForge: Obsidian e Ouro (marca/frame.md). Sobrescreve a escala slate/purple/orange
+   do Tailwind, então todos os painéis herdam a paleta sem trocar classe por classe. */
+@theme {
+  --color-slate-50: #f7f1e3;
+  --color-slate-100: #f1e9d8;
+  --color-slate-200: #e3d9c2;
+  --color-slate-300: #c4b9a0;
+  --color-slate-400: #9a8f78;
+  --color-slate-500: #6b614f;
+  --color-slate-600: #463e31;
+  --color-slate-700: #2e281f;
+  --color-slate-800: #211d16;
+  --color-slate-900: #17140f;
+  --color-slate-950: #0f0d09;
+  --color-purple-300: #e8d3a0;
+  --color-purple-400: #d4af6a;
+  --color-purple-500: #b8923f;
+  --color-purple-600: #9a7a30;
+  --color-purple-700: #7a5b22;
+  --color-orange-400: #e3c07d;
+  --color-orange-500: #d4af6a;
+  --color-orange-600: #b8923f;
+  --color-gold: #d4af6a;
+  --color-gold-deep: #7a5b22;
+  --color-cream: #f1e9d8;
+  --font-display: var(--font-playfair), Georgia, serif;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
   --animate-tour-ring: tour-ring-pulse 1.5s ease-in-out infinite;
   --animate-slide-up: slide-up 300ms ease-out forwards;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
 }
 
 @keyframes tour-ring-pulse {

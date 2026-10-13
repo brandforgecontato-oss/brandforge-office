@@ -1,6 +1,6 @@
 const en = {
   // App
-  "app.title": "Office Visualizer",
+  "app.title": "Office",
   "app.initializingSystems": "Initializing Systems...",
 
   // Header Controls
@@ -106,6 +106,8 @@ const en = {
   "sessions.unknownProject": "Unknown Project",
   "sessions.deleteSession": "Delete session",
   "sessions.events": "events",
+  "sessions.olderSessions_one": "{count} older session",
+  "sessions.olderSessions_other": "{count} older sessions",
   "sessions.events_one": "{count} event",
   "sessions.events_other": "{count} events",
   "sessions.expandSidebar": "Expand sidebar",

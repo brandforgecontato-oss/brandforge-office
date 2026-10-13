@@ -15,6 +15,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { ptBR as dateFnsPtBR, es as dateFnsEs } from "date-fns/locale";
 import { GitStatusPanel } from "@/components/layout/GitStatusPanel";
+import { useBrandforgeStore } from "@/stores/brandforgeStore";
 import { EventLog } from "@/components/layout/EventLog";
 import { useTranslation } from "@/hooks/useTranslation";
 import type { Session } from "@/hooks/useSessions";
@@ -93,6 +94,7 @@ export function MobileDrawer({
   onClearDB,
 }: MobileDrawerProps): React.ReactNode {
   const { t, language } = useTranslation();
+  const isOfficeSession = useBrandforgeStore((s) => s.isOfficeSession);
   const dateFnsLocale =
     language === "pt-BR"
       ? dateFnsPtBR
@@ -335,9 +337,11 @@ export function MobileDrawer({
           </div>
 
           {/* Git Status Panel */}
-          <div className="mb-6">
-            <GitStatusPanel />
-          </div>
+          {!isOfficeSession && (
+            <div className="mb-6">
+              <GitStatusPanel />
+            </div>
+          )}
 
           {/* Event Log */}
           <div>

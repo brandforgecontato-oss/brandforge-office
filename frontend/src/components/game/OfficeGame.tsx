@@ -77,6 +77,7 @@ import {
 } from "./AgentSprite";
 import { BossSprite, BossBubble, MobileBoss } from "./BossSprite";
 import { useNavigationStore } from "@/stores/navigationStore";
+import { useBrandforgeStore } from "@/stores/brandforgeStore";
 import { LOBBY_FLOOR_ID } from "@/types/navigation";
 import { ELEVATOR_POSITION, isInElevatorZone } from "@/systems/queuePositions";
 import { TrashCanSprite } from "./TrashCanSprite";
@@ -212,6 +213,7 @@ export function OfficeGame(): ReactNode {
   }, []);
 
   // Subscribe to store state
+  const isOfficeSession = useBrandforgeStore((s) => s.isOfficeSession);
   const agents = useGameStore(useShallow(selectAgents));
   const boss = useGameStore(selectBoss);
   const todos = useGameStore(selectTodos);
@@ -373,24 +375,28 @@ export function OfficeGame(): ReactNode {
                   )}
 
                   {/* Wall decorations */}
-                  <pixiContainer
-                    x={EMPLOYEE_OF_MONTH_POSITION.x}
-                    y={EMPLOYEE_OF_MONTH_POSITION.y}
-                  >
-                    <EmployeeOfTheMonth />
-                  </pixiContainer>
+                  {!isOfficeSession && (
+                    <pixiContainer
+                      x={EMPLOYEE_OF_MONTH_POSITION.x}
+                      y={EMPLOYEE_OF_MONTH_POSITION.y}
+                    >
+                      <EmployeeOfTheMonth />
+                    </pixiContainer>
+                  )}
                   <pixiContainer
                     x={CITY_WINDOW_POSITION.x}
                     y={CITY_WINDOW_POSITION.y}
                   >
                     <CityWindow />
                   </pixiContainer>
-                  <pixiContainer
-                    x={SAFETY_SIGN_POSITION.x}
-                    y={SAFETY_SIGN_POSITION.y}
-                  >
-                    <SafetySign />
-                  </pixiContainer>
+                  {!isOfficeSession && (
+                    <pixiContainer
+                      x={SAFETY_SIGN_POSITION.x}
+                      y={SAFETY_SIGN_POSITION.y}
+                    >
+                      <SafetySign />
+                    </pixiContainer>
+                  )}
                   <pixiContainer
                     x={WALL_CLOCK_POSITION.x}
                     y={WALL_CLOCK_POSITION.y}

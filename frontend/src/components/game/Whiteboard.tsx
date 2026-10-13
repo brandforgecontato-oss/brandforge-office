@@ -155,6 +155,11 @@ export function Whiteboard({ todos }: WhiteboardProps): ReactNode {
   // No escritório BrandForge o modo Kanban mostra o placar de aprovação das peças.
   const isOfficeSession = useBrandforgeStore((s) => s.isOfficeSession);
 
+  // No escritório BrandForge o quadro abre no Placar (uma vez por sessão do escritório).
+  useEffect(() => {
+    if (isOfficeSession) setMode(11);
+  }, [isOfficeSession, setMode]);
+
   // Keyboard hotkeys: T = Todo List (0), B = Background Tasks (1), 0-9 = modes
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

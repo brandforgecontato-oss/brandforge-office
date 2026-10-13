@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+});
+
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  weight: ["600"],
 });
 
 const geistMono = Geist_Mono({
@@ -13,9 +19,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Claude Office Visualizer",
+  title: "BrandForge Office",
   description:
-    "Real-time pixel art visualization of Claude Code operations in a virtual office",
+    "O escritório de agentes da BrandForge: veja o Orquestrador e a equipe trabalhando em tempo real",
 };
 
 export default function RootLayout({
@@ -24,9 +30,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} ${playfair.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
         {children}
