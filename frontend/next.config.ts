@@ -21,6 +21,9 @@ const nextConfig: NextConfig = {
   // fix, then re-run the floor-view hard-reload repro before flipping to true.
   // Original disable: commit f4fc22b.
   reactStrictMode: false,
+  // `next dev` recria AGENTS.md e CLAUDE.md na pasta do frontend a cada subida; este
+  // repositório já tem o CLAUDE.md da raiz, então a geração fica desligada.
+  agentRules: false,
 };
 
 export default nextConfig;

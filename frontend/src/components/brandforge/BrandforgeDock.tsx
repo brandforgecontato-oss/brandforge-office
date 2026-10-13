@@ -2,20 +2,35 @@
 
 /**
  * Doca do escritório BrandForge: botões no canto inferior esquerdo que abrem o chat com o
- * Orquestrador (e, nas próximas tarefas, o debate e o placar).
+ * Orquestrador e o debate com o Crítico (o placar entra na próxima tarefa).
  */
 
-import { useState, type ReactNode } from "react";
+import { useState, useSyncExternalStore, type ReactNode } from "react";
 import ChatPanel, { useChatSync } from "./ChatPanel";
+import DebatePanel, { useDebateSync } from "./DebatePanel";
 
-type View = "chat" | null;
+type View = "chat" | "debate" | null;
 
 export default function BrandforgeDock(): ReactNode {
-  const [view, setView] = useState<View>(null);
+  // Link direto para um painel: /?painel=chat|debate. useSyncExternalStore evita erro de
+  // hidratação (o servidor não conhece a URL).
+  const linkedView = useSyncExternalStore(
+    () => () => {},
+    () => new URLSearchParams(window.location.search).get("painel"),
+    () => null,
+  );
+  const [chosen, setChosen] = useState<View | undefined>(undefined);
+  const view: View =
+    chosen !== undefined
+      ? chosen
+      : linkedView === "chat" || linkedView === "debate"
+        ? linkedView
+        : null;
   useChatSync();
+  useDebateSync();
 
   const toggle = (next: Exclude<View, null>): void =>
-    setView((current) => (current === next ? null : next));
+    setChosen(view === next ? null : next);
 
   const buttonClass = (active: boolean): string =>
     `px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
@@ -25,10 +40,10 @@ export default function BrandforgeDock(): ReactNode {
     }`;
 
   return (
-    <div className="fixed bottom-3 left-3 z-40 flex flex-col items-start gap-2">
-      {view === "chat" && (
+    <div className="fixed bottom-3 left-3 lg:left-[21rem] z-40 flex flex-col items-start gap-2">
+      {view !== null && (
         <div className="w-[24rem] max-w-[calc(100vw-1.5rem)] h-[30rem] max-h-[70vh] rounded-xl border border-neutral-700 bg-neutral-900 shadow-2xl overflow-hidden">
-          <ChatPanel />
+          {view === "chat" ? <ChatPanel /> : <DebatePanel />}
         </div>
       )}
       <div className="flex gap-2">
@@ -37,6 +52,12 @@ export default function BrandforgeDock(): ReactNode {
           onClick={() => toggle("chat")}
         >
           Chat
+        </button>
+        <button
+          className={buttonClass(view === "debate")}
+          onClick={() => toggle("debate")}
+        >
+          Debate
         </button>
       </div>
     </div>

@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, field_validator
 
 from app.brandforge.chat import ChatBusyError, get_chat_service
+from app.brandforge.debate import find_debates, load_debate
 from app.brandforge.paths import office_dir
 from app.brandforge.roster import ROSTER
 
@@ -70,3 +71,30 @@ async def delete_chat() -> dict[str, str]:
     """Começa uma conversa nova com o Orquestrador."""
     get_chat_service().reset()
     return {"status": "ok"}
+
+
+@router.get("/debate")
+async def get_debate(
+    piece: Annotated[
+        str | None, Query(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$", max_length=120)
+    ] = None,
+) -> dict[str, object]:
+    """Debate Orquestrador × Crítico de uma peça (padrão: o mais recente) e a lista dos demais."""
+    debates = find_debates()
+    available = [
+        {"piece": name, "title": d.title, "state": d.state, "updatedAt": d.updated_at}
+        for name, path in debates
+        for d in [load_debate(name, path)]
+    ]
+    if piece is not None:
+        chosen = next(((n, p) for n, p in debates if n == piece), None)
+        if chosen is None:
+            raise HTTPException(status_code=404, detail="Debate não encontrado")
+    elif debates:
+        chosen = debates[0]
+    else:
+        return {"debate": None, "available": []}
+    return {
+        "debate": load_debate(*chosen).model_dump(by_alias=True),
+        "available": available,
+    }
