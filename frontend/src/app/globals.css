@@ -120,6 +120,14 @@ body {
     object-position: top left;
   }
 
+  /* Escritório BrandForge: o canvas ocupa exatamente a área desenhada (sem letterbox). Com
+     object-fit: contain o Pixi mapeia o clique pela caixa inteira do elemento e erra o y. */
+  .pixi-canvas-container.brandforge-canvas canvas {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 1280 / 1024;
+  }
+
   /* Custom Scrollbar Theme */
   ::-webkit-scrollbar {
     width: 8px;

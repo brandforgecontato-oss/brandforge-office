@@ -10,6 +10,7 @@
 import { useGameStore, selectAgents } from "@/stores/gameStore";
 import { useShallow } from "zustand/react/shallow";
 import { useTranslation } from "@/hooks/useTranslation";
+import { formatStateLabel } from "@/utils/stateLabels";
 import {
   Users,
   Briefcase,
@@ -72,18 +73,8 @@ function getPhaseColor(phase: string) {
   }
 }
 
-// Format phase name for display
-function formatPhase(phase: string): string {
-  return phase.replace(/_/g, " ");
-}
-
-// Format backend state for display
-function formatState(state: string): string {
-  return state.replace(/_/g, " ");
-}
-
 export function AgentStatus() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const agents = useGameStore(useShallow(selectAgents));
   const agentArray = Array.from(agents.values());
 
@@ -190,7 +181,7 @@ export function AgentStatus() {
                     <span
                       className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-semibold border ${getBackendStateColor(agent.backendState)}`}
                     >
-                      {formatState(agent.backendState)}
+                      {formatStateLabel(agent.backendState, language)}
                     </span>
                   </div>
 
@@ -200,7 +191,7 @@ export function AgentStatus() {
                     <span
                       className={`px-1.5 py-0.5 rounded text-[9px] font-medium border ${getPhaseColor(agent.phase)}`}
                     >
-                      {formatPhase(agent.phase)}
+                      {formatStateLabel(agent.phase, language)}
                     </span>
                   </div>
                 </div>

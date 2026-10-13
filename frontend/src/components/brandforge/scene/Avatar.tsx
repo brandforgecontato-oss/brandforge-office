@@ -240,16 +240,15 @@ export function Avatar({ model }: { model: AvatarModel }): ReactNode {
   const task = model.task ? truncateBubbleText(model.task, 28) : null;
 
   return (
-    <pixiContainer
-      ref={groupRef}
-      x={start.x}
-      y={start.y}
-      eventMode={model.focusId ? "static" : "none"}
-      cursor={model.focusId ? "pointer" : "default"}
-      onPointerTap={handleTap}
-    >
+    <pixiContainer ref={groupRef} x={start.x} y={start.y}>
       <pixiGraphics ref={ringRef} draw={drawRing} alpha={0} />
-      <pixiGraphics draw={drawBody} />
+      {/* O clique fica no corpo do avatar: um Container sem hitArea não recebe eventos no Pixi 8. */}
+      <pixiGraphics
+        draw={drawBody}
+        eventMode={model.focusId ? "static" : "none"}
+        cursor={model.focusId ? "pointer" : "default"}
+        onPointerTap={handleTap}
+      />
       <SceneText
         text={initials(model.name)}
         size={18}

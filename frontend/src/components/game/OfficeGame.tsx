@@ -341,7 +341,9 @@ export function OfficeGame(): ReactNode {
           wrapperClass="w-full h-full"
           contentClass="w-full h-full"
         >
-          <div className="pixi-canvas-container w-full h-full">
+          <div
+            className={`pixi-canvas-container w-full h-full${isOfficeSession ? " brandforge-canvas" : ""}`}
+          >
             <Application
               key={`pixi-app-${hmrVersion}`}
               width={CANVAS_WIDTH}

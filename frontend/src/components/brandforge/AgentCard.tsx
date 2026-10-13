@@ -7,6 +7,8 @@
 
 import type { ReactNode } from "react";
 import type { RosterEntry } from "@/stores/brandforgeStore";
+import { formatStateLabel } from "@/utils/stateLabels";
+import { cleanTask } from "./scene/avatars";
 
 interface AgentCardProps {
   entry: RosterEntry;
@@ -45,12 +47,13 @@ export default function AgentCard({
         </div>
         {state && (
           <div>
-            <span className="text-neutral-600">Estado:</span> {state}
+            <span className="text-neutral-600">Estado:</span>{" "}
+            {formatStateLabel(state, "pt-BR")}
           </div>
         )}
-        {task && (
+        {cleanTask(task) && (
           <div className="line-clamp-3">
-            <span className="text-neutral-600">Tarefa:</span> {task}
+            <span className="text-neutral-600">Tarefa:</span> {cleanTask(task)}
           </div>
         )}
       </div>
