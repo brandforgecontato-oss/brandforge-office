@@ -72,23 +72,30 @@ def save_settings(path: Path, settings: dict[str, Any]) -> None:
     os.replace(tmp, path)
 
 
-def create_hook_config(hook_cmd: str, hook_type: str) -> dict[str, Any]:
+def create_hook_config(hook_cmd: str, hook_type: str, shell: str | None = None) -> dict[str, Any]:
     """Create the hook configuration dictionary.
 
     Args:
         hook_cmd: Path to the claude-office-hook command
         hook_type: The hook type in PascalCase (e.g., "PreToolUse")
+        shell: Shell Claude Code runs the hook with (``"powershell"`` on Windows
+            machines without Git Bash); ``None`` keeps Claude Code's default (bash)
     """
     # Convert PascalCase to snake_case for the event type argument
     event_type = convert_camel_to_snake(hook_type)
     if " " in hook_cmd and not hook_cmd.startswith(('"', "'")):
         hook_cmd = f'"{hook_cmd}"'  # path with spaces (e.g. "Pc User") needs shell quoting
 
-    config = {
+    command = f"{hook_cmd} {event_type}"
+    if shell == "powershell":
+        command = f"& {command}"  # call operator: a quoted path is a string in PowerShell
+    config: dict[str, Any] = {
         "type": "command",
-        "command": f"{hook_cmd} {event_type}",
+        "command": command,
         "timeout": 2,  # Seconds
     }
+    if shell:
+        config["shell"] = shell
 
     # Wrap in the structure expected by Claude Code
     # Structure:
@@ -126,11 +133,20 @@ def is_same_hook(entry1: dict[str, Any], entry2: dict[str, Any]) -> bool:
         return False
 
 
+def _is_office_hook(entry: dict[str, Any]) -> bool:
+    """True when the entry runs the ``claude-office-hook`` command."""
+    try:
+        return "claude-office-hook" in entry.get("hooks", [])[0].get("command", "")
+    except (IndexError, AttributeError):
+        return False
+
+
 def install_hooks(
     hook_cmd: str,
     dry_run: bool = False,
     settings_path: Path | None = None,
     env: dict[str, str] | None = None,
+    shell: str | None = None,
 ):
     """Install hooks into settings.
 
@@ -140,6 +156,7 @@ def install_hooks(
         settings_path: settings.json to edit instead of the user-level one
             (e.g. a project's ``.claude/settings.json``)
         env: variables to merge into the settings ``env`` block
+        shell: shell for the hook commands (see ``create_hook_config``)
     """
     settings_path = settings_path or get_settings_path()
     print(f"Installing hooks to {settings_path}...")
@@ -160,7 +177,7 @@ def install_hooks(
             settings["env"] = env_config
 
     for hook_type in HOOK_TYPES:
-        new_entry = create_hook_config(hook_cmd, hook_type)
+        new_entry = create_hook_config(hook_cmd, hook_type, shell)
         event_type = convert_camel_to_snake(hook_type)
 
         current_list = hooks_config.get(hook_type, [])
@@ -169,6 +186,12 @@ def install_hooks(
         if any(is_same_hook(existing, new_entry) for existing in current_list):
             print(f"  [Skip] {hook_type}: Hook already exists.")
             continue
+
+        # Same tool installed in another format (e.g. bash -> powershell): replace, not duplicate.
+        stale = [e for e in current_list if _is_office_hook(e)]
+        if stale:
+            current_list = [e for e in current_list if e not in stale]
+            print(f"  [Replace] {hook_type}: {len(stale)} old Claude Office hook(s)")
 
         print(f"  [Add]  {hook_type}: {hook_cmd} {event_type}")
         current_list.append(new_entry)
@@ -261,6 +284,12 @@ def main():
     )
 
     parser.add_argument(
+        "--shell",
+        choices=["powershell"],
+        default=None,
+        help="shell Claude Code uses to run the hooks (default: Claude Code's own default, bash)",
+    )
+    parser.add_argument(
         "--set-env",
         action="append",
         default=[],
@@ -272,7 +301,7 @@ def main():
 
     if args.action == "install":
         env = dict(item.split("=", 1) for item in args.set_env)
-        install_hooks(args.hook_cmd, args.dry_run, args.settings, env)
+        install_hooks(args.hook_cmd, args.dry_run, args.settings, env, args.shell)
     elif args.action == "uninstall":
         uninstall_hooks(args.hook_cmd, args.dry_run, args.settings)
 

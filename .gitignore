@@ -116,3 +116,4 @@ docs/superpowers
 
 # Escritorio BrandForge (logs locais do iniciar-escritorio.ps1)
 .escritorio/
+backend/brandforge_chat.json

@@ -49,6 +49,7 @@ import CommandBar from "@/components/attention/CommandBar";
 import AttentionToasts from "@/components/attention/AttentionToasts";
 import AgentPopup from "@/components/attention/AgentPopup";
 import { useBrandforgeStore } from "@/stores/brandforgeStore";
+import BrandforgeDock from "@/components/brandforge/BrandforgeDock";
 import { useAttentionStore } from "@/stores/attentionStore";
 import { usePreferencesStore } from "@/stores/preferencesStore";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -577,6 +578,7 @@ export default function V2TestPage(): React.ReactNode {
       <CommandBar />
       <AttentionToasts />
       <AgentPopup />
+      <BrandforgeDock />
 
       {/* ----------------------------------------------------------------
           Tour Overlay

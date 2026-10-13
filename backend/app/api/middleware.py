@@ -65,6 +65,8 @@ def _is_state_changing(path: str, method: str) -> bool:
         (path == prefix and method == "DELETE")
         or (path == f"{prefix}/simulate" and method == "POST")
         or (path.startswith(f"{prefix}/") and path.endswith("/focus") and method == "POST")
+        # Escritório BrandForge: o chat dispara o Claude Code (consome a assinatura).
+        or (path == f"{settings.API_V1_STR}/brandforge/chat" and method in ("POST", "DELETE"))
     )
 
 

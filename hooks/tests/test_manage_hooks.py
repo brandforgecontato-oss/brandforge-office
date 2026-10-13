@@ -156,3 +156,49 @@ def test_hook_cmd_already_quoted_is_kept(tmp_path: Path) -> None:
     manage_hooks.install_hooks('"D:/Pc User/x.exe"', settings_path=settings)
     saved = json.loads(settings.read_text(encoding="utf-8"))
     assert saved["hooks"]["Stop"][0]["hooks"][0]["command"] == '"D:/Pc User/x.exe" stop'
+
+
+def test_shell_powershell_usa_operador_de_chamada_e_campo_shell(tmp_path: Path) -> None:
+    """No Windows o hook roda em PowerShell: `& "caminho" evento` + "shell": "powershell"."""
+    settings = tmp_path / "settings.json"
+    manage_hooks.install_hooks(
+        "D:/Pc User/hooks/claude-office-hook.exe", settings_path=settings, shell="powershell"
+    )
+    saved = json.loads(settings.read_text(encoding="utf-8"))
+    hook = saved["hooks"]["Stop"][0]["hooks"][0]
+    assert hook["command"] == '& "D:/Pc User/hooks/claude-office-hook.exe" stop'
+    assert hook["shell"] == "powershell"
+
+
+def test_sem_shell_o_campo_nao_aparece(tmp_path: Path) -> None:
+    settings = tmp_path / "settings.json"
+    manage_hooks.install_hooks("claude-office-hook", settings_path=settings)
+    saved = json.loads(settings.read_text(encoding="utf-8"))
+    assert "shell" not in saved["hooks"]["Stop"][0]["hooks"][0]
+
+
+def test_reinstalar_com_outro_formato_substitui_o_hook_antigo(tmp_path: Path) -> None:
+    """Trocar bash por powershell não pode deixar dois hooks (evento duplicado no escritório)."""
+    settings = tmp_path / "settings.json"
+    manage_hooks.install_hooks("D:/Pc User/x/claude-office-hook.exe", settings_path=settings)
+    manage_hooks.install_hooks(
+        "D:/Pc User/x/claude-office-hook.exe", settings_path=settings, shell="powershell"
+    )
+    saved = json.loads(settings.read_text(encoding="utf-8"))
+    stop = saved["hooks"]["Stop"]
+    assert len(stop) == 1
+    assert stop[0]["hooks"][0]["shell"] == "powershell"
+
+
+def test_reinstalar_preserva_hooks_de_outras_ferramentas(tmp_path: Path) -> None:
+    settings = tmp_path / "settings.json"
+    settings.write_text(
+        json.dumps({"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "rtk hook"}]}]}}),
+        encoding="utf-8",
+    )
+    manage_hooks.install_hooks("claude-office-hook", settings_path=settings)
+    manage_hooks.install_hooks("claude-office-hook", settings_path=settings, shell="powershell")
+    stop = json.loads(settings.read_text(encoding="utf-8"))["hooks"]["Stop"]
+    comandos = [e["hooks"][0]["command"] for e in stop]
+    assert comandos[0] == "rtk hook"
+    assert len(comandos) == 2

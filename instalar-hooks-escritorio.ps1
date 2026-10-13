@@ -30,8 +30,7 @@ Push-Location (Join-Path $raiz 'hooks')
 try {
     & uv sync
     $exe = (Resolve-Path '.venv\Scripts\claude-office-hook.exe').Path.Replace([string][char]92, '/')
-    # O Claude Code roda o comando num shell POSIX no Windows: barras normais. O manage_hooks.py
-    # poe as aspas, porque a pasta tem espaco.
+    # Barras normais; o manage_hooks.py poe as aspas (a pasta tem espaco) e o operador & do PowerShell.
     $comando = $exe
 
     if ($Remover) {
@@ -47,8 +46,9 @@ try {
         ($codificado.Substring(0, 1).ToUpper() + $codificado.Substring(1))) | Select-Object -Unique
     $prefixos = $variantes -join ','
 
+    # shell powershell: o Claude Code nao precisa achar o Git Bash para rodar os hooks.
     & uv run python manage_hooks.py install --hook-cmd $comando --settings $settings `
-        --set-env "CLAUDE_OFFICE_STRIP_PREFIXES=$prefixos"
+        --shell powershell --set-env "CLAUDE_OFFICE_STRIP_PREFIXES=$prefixos"
 } finally {
     Pop-Location
 }
