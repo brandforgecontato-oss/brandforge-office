@@ -3,11 +3,18 @@
 /**
  * Avatar plano do escritório BrandForge: círculo na cor do agente, com iniciais, nome e
  * a tarefa do momento. Parado fica apagado; trabalhando fica aceso, com um anel que pulsa.
+ * Anda até a mesa de debate (e volta) em linhas retas pelas portas das salas.
  */
 
-import { useCallback, useRef, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useTick } from "@pixi/react";
-import type { Graphics } from "pixi.js";
+import type { Container, Graphics } from "pixi.js";
 import { CANVAS_WIDTH } from "@/constants/canvas";
 import { useAttentionStore } from "@/stores/attentionStore";
 import type { BubbleContent } from "@/types";
@@ -22,6 +29,8 @@ import {
   nameToLines,
   wrapText,
 } from "./draw";
+import type { Point } from "./layout";
+import { WALK_SPEED, advance, planRoute } from "./route";
 
 const RADIUS = 30;
 const NAME_SIZE = 13;
@@ -74,22 +83,93 @@ export function SceneText({
   );
 }
 
+/** Mesa e notebook de um posto (fica parada; o avatar anda). */
+export function StationDesk({
+  home,
+  lit,
+}: {
+  home: Point;
+  lit: boolean;
+}): ReactNode {
+  const draw = useCallback((g: Graphics) => drawDesk(g, lit), [lit]);
+  return (
+    <pixiContainer x={home.x} y={home.y}>
+      <pixiGraphics draw={draw} />
+    </pixiContainer>
+  );
+}
+
+/** Balão de fala acima do avatar. */
+function SceneBubble({ content }: { content: BubbleContent }): ReactNode {
+  const lines = wrapText(truncateBubbleText(content.text), 26);
+  const longest = Math.max(...lines.map((l) => l.length), 8);
+  const w = Math.max(96, longest * 8.2 + 28);
+  const h = lines.length * 19 + 20;
+  const draw = useCallback((g: Graphics) => drawSpeechBubble(g, w, h), [w, h]);
+
+  return (
+    <pixiContainer y={-RADIUS - 14}>
+      <pixiGraphics draw={draw} />
+      <SceneText
+        text={lines.join("\n")}
+        y={-h / 2}
+        size={14}
+        weight="600"
+        color={PALETTE.canvas}
+      />
+    </pixiContainer>
+  );
+}
+
 export function Avatar({ model }: { model: AvatarModel }): ReactNode {
   const openFocusPopup = useAttentionStore((s) => s.openFocusPopup);
+  const groupRef = useRef<Container>(null);
   const ringRef = useRef<Graphics>(null);
+  // Posição e trajeto vivem em refs: o avatar anda a 60 quadros por segundo sem re-renderizar.
+  const [start] = useState(() => ({
+    x: model.position.x,
+    y: model.position.y,
+  }));
+  const motion = useRef<{ pos: Point; path: Point[] }>({
+    pos: { x: 0, y: 0 },
+    path: [],
+  });
+  // Na montagem o avatar já nasce no destino (só anda quando o destino muda depois).
+  useEffect(() => {
+    motion.current.pos = { x: start.x, y: start.y };
+  }, [start]);
 
   const color = hexToNumber(model.color);
   const offline = model.activity === "offline";
   const active = model.activity === "active";
   const waiting = model.activity === "waiting";
   const lit = active || waiting;
+  const ringColor = waiting ? PALETTE.waiting : PALETTE.gold;
   const nameLines = nameToLines(model.name);
   const longestLine = Math.max(...nameLines.map((l) => l.length));
   const pillH = nameLines.length * NAME_LINE + 8;
-  const ringColor = waiting ? PALETTE.waiting : PALETTE.gold;
 
-  // Anel que pulsa enquanto o agente trabalha (ou espera uma permissão).
+  // Novo destino (ex.: foi para a mesa de debate): traça o trajeto a partir de onde está.
+  const targetX = model.position.x;
+  const targetY = model.position.y;
+  useEffect(() => {
+    const m = motion.current;
+    m.path = planRoute(m.pos, { x: targetX, y: targetY });
+  }, [targetX, targetY, motion]);
+
   useTick((ticker) => {
+    const group = groupRef.current;
+    if (!group) return;
+    const m = motion.current;
+    if (m.path.length > 0) {
+      const step = (WALK_SPEED * ticker.deltaMS) / 1000;
+      const next = advance(m.pos, m.path, step);
+      m.pos = next.position;
+      m.path = next.path;
+    }
+    group.position.set(m.pos.x, m.pos.y);
+
+    // Anel que pulsa enquanto o agente trabalha (ou espera uma permissão).
     const ring = ringRef.current;
     if (!ring) return;
     if (!lit) {
@@ -97,8 +177,9 @@ export function Avatar({ model }: { model: AvatarModel }): ReactNode {
       return;
     }
     const t = ticker.lastTime / 1000;
-    ring.alpha = 0.55 + 0.45 * Math.sin(t * (waiting ? 7 : 3.2));
-    ring.scale.set(1 + 0.05 * Math.sin(t * (waiting ? 7 : 3.2)));
+    const wave = Math.sin(t * (waiting ? 7 : 3.2));
+    ring.alpha = 0.55 + 0.45 * wave;
+    ring.scale.set(1 + 0.05 * wave);
   });
 
   const drawBody = useCallback(
@@ -110,7 +191,7 @@ export function Avatar({ model }: { model: AvatarModel }): ReactNode {
         g.circle(0, 0, RADIUS);
         g.fill(PALETTE.roomFloor);
         g.circle(0, 0, RADIUS);
-        g.stroke({ width: 1.5, color, alpha: 0.4 });
+        g.stroke({ width: 1.5, color, alpha: 0.45 });
       } else {
         g.circle(0, 0, RADIUS);
         g.fill({ color, alpha: lit ? 1 : 0.6 });
@@ -142,36 +223,31 @@ export function Avatar({ model }: { model: AvatarModel }): ReactNode {
     [longestLine, pillH, color, offline],
   );
 
-  const drawDeskCallback = useCallback(
-    (g: Graphics) => drawDesk(g, lit),
-    [lit],
-  );
-
   const handleTap = useCallback(() => {
     if (!model.focusId) return;
     const canvas = document.querySelector(".pixi-canvas-container canvas");
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const scale = rect.width / CANVAS_WIDTH;
+    const { pos } = motion.current;
     openFocusPopup(
       model.focusId,
-      rect.left + model.position.x * scale,
-      rect.top + model.position.y * scale,
+      rect.left + pos.x * scale,
+      rect.top + pos.y * scale,
     );
-  }, [model.focusId, model.position.x, model.position.y, openFocusPopup]);
+  }, [model.focusId, openFocusPopup, motion]);
 
   const task = model.task ? truncateBubbleText(model.task, 28) : null;
-  const textAlpha = offline ? 0.45 : 1;
 
   return (
     <pixiContainer
-      x={model.position.x}
-      y={model.position.y}
+      ref={groupRef}
+      x={start.x}
+      y={start.y}
       eventMode={model.focusId ? "static" : "none"}
       cursor={model.focusId ? "pointer" : "default"}
       onPointerTap={handleTap}
     >
-      {!model.visitor && <pixiGraphics draw={drawDeskCallback} />}
       <pixiGraphics ref={ringRef} draw={drawRing} alpha={0} />
       <pixiGraphics draw={drawBody} />
       <SceneText
@@ -180,7 +256,7 @@ export function Avatar({ model }: { model: AvatarModel }): ReactNode {
         weight="700"
         color={offline ? PALETTE.inkDim : PALETTE.canvas}
       />
-      <pixiContainer y={PILL_Y} alpha={textAlpha}>
+      <pixiContainer y={PILL_Y} alpha={offline ? 0.45 : 1}>
         <pixiGraphics draw={drawPill} />
         <SceneText
           text={nameLines.join("\n")}
@@ -198,37 +274,7 @@ export function Avatar({ model }: { model: AvatarModel }): ReactNode {
           color={waiting ? PALETTE.waiting : PALETTE.gold}
         />
       )}
-    </pixiContainer>
-  );
-}
-
-/** Balão de fala sobre um avatar (camada de cima da cena). */
-export function SceneBubble({
-  content,
-  x,
-  y,
-}: {
-  content: BubbleContent;
-  x: number;
-  y: number;
-}): ReactNode {
-  const lines = wrapText(truncateBubbleText(content.text), 26);
-  const longest = Math.max(...lines.map((l) => l.length), 8);
-  const w = Math.max(96, longest * 8.2 + 28);
-  const h = lines.length * 19 + 20;
-  const draw = useCallback((g: Graphics) => drawSpeechBubble(g, w, h), [w, h]);
-
-  return (
-    <pixiContainer x={x} y={y - RADIUS - 14}>
-      <pixiGraphics draw={draw} />
-      <SceneText
-        text={lines.join("\n")}
-        y={-h / 2}
-        size={14}
-        weight="600"
-        color={PALETTE.canvas}
-        font={FONT_UI}
-      />
+      {model.bubble && <SceneBubble content={model.bubble} />}
     </pixiContainer>
   );
 }

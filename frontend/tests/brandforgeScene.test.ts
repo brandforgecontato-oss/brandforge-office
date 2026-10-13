@@ -14,6 +14,7 @@ import {
   STATIONS,
   roomById,
   visitorSlot,
+  type Point,
 } from "@/components/brandforge/scene/layout";
 import {
   agentActivity,
@@ -21,9 +22,16 @@ import {
   buildAvatars,
   cleanTask,
   initials,
+  isDebating,
   type BossLike,
   type RosterLike,
 } from "@/components/brandforge/scene/avatars";
+import {
+  advance,
+  planRoute,
+  roomAt,
+  WALK_SPEED,
+} from "@/components/brandforge/scene/route";
 import { nameToLines, wrapText } from "@/components/brandforge/scene/draw";
 import type { AgentAnimationState } from "@/stores/slices/types";
 
@@ -331,5 +339,137 @@ describe("buildAvatars", () => {
       BOSS,
     );
     expect(models).toHaveLength(11);
+  });
+});
+
+describe("isDebating", () => {
+  const fresh = (now: number) => ({
+    state: "em debate",
+    updatedAt: new Date(now - 30_000).toISOString(),
+  });
+  const NOW = Date.parse("2026-10-13T20:00:00Z");
+
+  it("com o Crítico trabalhando, há debate", () => {
+    expect(isDebating("active", "idle", null, NOW)).toBe(true);
+    expect(isDebating("waiting", "idle", null, NOW)).toBe(true);
+  });
+
+  it("debate recente em andamento e Orquestrador ocupado: há debate", () => {
+    expect(isDebating("idle", "active", fresh(NOW), NOW)).toBe(true);
+  });
+
+  it("debate em andamento mas Orquestrador parado: não há debate", () => {
+    expect(isDebating("offline", "idle", fresh(NOW), NOW)).toBe(false);
+  });
+
+  it("debate velho (abandonado) não prende ninguém à mesa", () => {
+    const old = {
+      state: "em debate",
+      updatedAt: new Date(NOW - 10 * 60_000).toISOString(),
+    };
+    expect(isDebating("offline", "active", old, NOW)).toBe(false);
+  });
+
+  it("debate encerrado não conta", () => {
+    const done = { state: "aprovada", updatedAt: new Date(NOW).toISOString() };
+    expect(isDebating("offline", "active", done, NOW)).toBe(false);
+  });
+});
+
+describe("buildAvatars com debate", () => {
+  it("Orquestrador e Crítico vão à mesa quando o Crítico trabalha; os outros ficam", () => {
+    const models = buildAvatars(
+      ROSTER,
+      [agent("c1", "critico", "working"), agent("r1", "roteirista", "working")],
+      { ...BOSS, backendState: "working" },
+      { now: Date.now() },
+    );
+    const orq = models.find((m) => m.slug === "orquestrador")!;
+    const critico = models.find((m) => m.slug === "critico")!;
+    const roteirista = models.find((m) => m.slug === "roteirista")!;
+    expect(orq.atTable).toBe(true);
+    expect(orq.position).toEqual(DEBATE_SEATS.orquestrador);
+    expect(orq.home).toEqual({
+      x: STATIONS.orquestrador.x,
+      y: STATIONS.orquestrador.y,
+    });
+    expect(critico.atTable).toBe(true);
+    expect(critico.position).toEqual(DEBATE_SEATS.critico);
+    expect(roteirista.atTable).toBe(false);
+    expect(roteirista.position).toEqual({
+      x: STATIONS.roteirista.x,
+      y: STATIONS.roteirista.y,
+    });
+  });
+
+  it("sem debate, cada um fica no seu posto", () => {
+    const models = buildAvatars(ROSTER, [], BOSS, { now: Date.now() });
+    expect(models.every((m) => !m.atTable)).toBe(true);
+    expect(models.every((m) => m.position.x === m.home.x)).toBe(true);
+  });
+});
+
+describe("trajetos", () => {
+  it("roomAt acha a sala do ponto, ou nada no corredor", () => {
+    expect(roomAt(STATIONS.orquestrador)?.id).toBe("orquestrador");
+    expect(roomAt(STATIONS.critico)?.id).toBe("debate");
+    expect(roomAt({ x: CORRIDOR.x + CORRIDOR.w / 2, y: 500 })).toBeNull();
+  });
+
+  it("na mesma sala vai direto ao destino", () => {
+    expect(planRoute(STATIONS.critico, DEBATE_SEATS.critico)).toEqual([
+      DEBATE_SEATS.critico,
+    ]);
+  });
+
+  it("entre salas passa pela porta de saída, corredor e porta de entrada", () => {
+    const route = planRoute(STATIONS.orquestrador, DEBATE_SEATS.orquestrador);
+    const orq = roomById("orquestrador");
+    const deb = roomById("debate");
+    expect(route[0]).toEqual(orq.door);
+    expect(route).toContainEqual(deb.door);
+    expect(route[route.length - 1]).toEqual(DEBATE_SEATS.orquestrador);
+    // nunca atravessa uma parede: todo trecho entre pontos consecutivos é curto ou passa por porta
+    expect(route.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("de uma sala para outra em linhas diferentes cruza o corredor na vertical", () => {
+    const route = planRoute(STATIONS.estrategista, STATIONS.revisor);
+    const lane = CORRIDOR.x + CORRIDOR.w / 2;
+    expect(route.some((p) => p.x === lane)).toBe(true);
+    expect(route[route.length - 1]).toEqual(STATIONS.revisor);
+  });
+
+  it("não repete pontos em sequência", () => {
+    const route = planRoute(STATIONS.orquestrador, DEBATE_SEATS.orquestrador);
+    for (let i = 1; i < route.length; i++) {
+      expect(
+        route[i].x === route[i - 1].x && route[i].y === route[i - 1].y,
+      ).toBe(false);
+    }
+  });
+
+  it("advance anda a distância pedida e devolve o resto do trajeto", () => {
+    const path = [
+      { x: 100, y: 0 },
+      { x: 100, y: 100 },
+    ];
+    const step = advance({ x: 0, y: 0 }, path, 150);
+    expect(step.position).toEqual({ x: 100, y: 50 });
+    expect(step.path).toEqual([{ x: 100, y: 100 }]);
+    const done = advance(step.position, step.path, 1000);
+    expect(done.position).toEqual({ x: 100, y: 100 });
+    expect(done.path).toEqual([]);
+  });
+
+  it("a caminhada leva poucos segundos entre as salas", () => {
+    const route = planRoute(STATIONS.orquestrador, DEBATE_SEATS.orquestrador);
+    let length = 0;
+    let last: Point = STATIONS.orquestrador;
+    for (const p of route) {
+      length += Math.hypot(p.x - last.x, p.y - last.y);
+      last = p;
+    }
+    expect(length / WALK_SPEED).toBeLessThan(4);
   });
 });

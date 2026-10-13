@@ -206,7 +206,7 @@ describe("buildSharedActions", () => {
 
     expect(rec.calls[0]).toMatchObject({
       method: "onShowBossBubble",
-      args: ["Here's your task, Alice!", "clipboard"],
+      args: ["Aqui está a sua tarefa, Alice!", "clipboard"],
     });
     expect(rec.calls[1]).toMatchObject({
       method: "onShowAgentBubble",

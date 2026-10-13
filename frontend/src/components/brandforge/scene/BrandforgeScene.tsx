@@ -5,14 +5,21 @@
  * Renderizada dentro do <Application> do OfficeGame quando a sessão é a do escritório.
  */
 
-import { useCallback, useMemo, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { extend } from "@pixi/react";
 import { Container, Graphics, Text } from "pixi.js";
 import { useShallow } from "zustand/react/shallow";
 import { useGameStore, selectAgents, selectBoss } from "@/stores/gameStore";
 import { useBrandforgeStore } from "@/stores/brandforgeStore";
+import { useDebateStore } from "@/stores/debateStore";
 import { PlacarKanbanMode } from "@/components/game/whiteboard/PlacarKanbanMode";
-import { Avatar, SceneBubble, SceneText } from "./Avatar";
+import { Avatar, SceneText, StationDesk } from "./Avatar";
 import { buildAvatars } from "./avatars";
 import {
   FONT_DISPLAY,
@@ -123,9 +130,33 @@ export function BrandforgeScene(): ReactNode {
   const agents = useGameStore(useShallow(selectAgents));
   const boss = useGameStore(selectBoss);
 
+  const debate = useDebateStore((s) => s.debate);
+
+  // Relógio lento: o debate "em andamento" expira se o debate.md parar de mudar.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 15000);
+    return () => clearInterval(timer);
+  }, []);
+
   const models = useMemo(
-    () => buildAvatars(roster, agents.values(), boss),
-    [roster, agents, boss],
+    () =>
+      buildAvatars(roster, agents.values(), boss, {
+        debate: debate
+          ? { state: debate.state, updatedAt: debate.updatedAt }
+          : null,
+        now,
+      }),
+    [roster, agents, boss, debate, now],
+  );
+  const debating = models.some((m) => m.atTable);
+  // Quem fala (balão) é desenhado por último, para o balão ficar por cima dos vizinhos.
+  const drawOrder = useMemo(
+    () =>
+      [...models].sort(
+        (a, b) => Number(Boolean(a.bubble)) - Number(Boolean(b.bubble)),
+      ),
+    [models],
   );
 
   const tray = roomById("revisao");
@@ -149,6 +180,10 @@ export function BrandforgeScene(): ReactNode {
   const drawTray = useCallback(
     (g: Graphics) => drawDeliveryTray(g, tray.x + tray.w - 190, tray.y + 150),
     [tray],
+  );
+  const drawTable = useCallback(
+    (g: Graphics) => drawDebateTable(g, debating),
+    [debating],
   );
   const drawBoard = useCallback(
     (g: Graphics) => drawBoardFrame(g, PLACAR_BOARD.w, PLACAR_BOARD.h),
@@ -178,7 +213,7 @@ export function BrandforgeScene(): ReactNode {
         </pixiContainer>
       ))}
 
-      <pixiGraphics draw={drawDebateTable} />
+      <pixiGraphics draw={drawTable} />
       <SceneText
         text="DEBATE"
         x={DEBATE_TABLE.x}
@@ -218,21 +253,19 @@ export function BrandforgeScene(): ReactNode {
         </pixiContainer>
       </pixiContainer>
 
-      {models.map((model) => (
-        <Avatar key={model.key} model={model} />
-      ))}
-
-      {/* Balões por cima de tudo */}
+      {/* Mesas dos postos (paradas) e, por cima, os avatares (que andam) */}
       {models
-        .filter((m) => m.bubble)
+        .filter((m) => !m.visitor)
         .map((m) => (
-          <SceneBubble
-            key={`bolha-${m.key}`}
-            content={m.bubble!}
-            x={m.position.x}
-            y={m.position.y}
+          <StationDesk
+            key={`mesa-${m.key}`}
+            home={m.home}
+            lit={m.activity === "active" || m.activity === "waiting"}
           />
         ))}
+      {drawOrder.map((model) => (
+        <Avatar key={model.key} model={model} />
+      ))}
     </>
   );
 }

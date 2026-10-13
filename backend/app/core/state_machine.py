@@ -295,7 +295,7 @@ def _handle_permission_request(sm: "StateMachine", event: AnyEvent) -> None:
 
     waiting_bubble = BubbleContent(
         type=BubbleType.THOUGHT,
-        text=f"Waiting: {tool_name}",
+        text=f"Aguardando: {tool_name}",
         icon="❓",
     )
 
@@ -772,7 +772,7 @@ class StateMachine:
                 text = cmd_clean
 
         elif tool_name in ("Task", "Agent"):
-            text = "Delegating..."
+            text = "Delegando..."
 
         text = compress_paths_in_text(text)
         text = truncate_long_words(text, max_len=35)

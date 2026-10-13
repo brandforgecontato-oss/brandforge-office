@@ -7,7 +7,13 @@
 
 import type { BubbleContent } from "@/types";
 import type { AgentAnimationState } from "@/stores/slices/types";
-import { MAX_VISITORS, STATIONS, visitorSlot, type Point } from "./layout";
+import {
+  DEBATE_SEATS,
+  MAX_VISITORS,
+  STATIONS,
+  visitorSlot,
+  type Point,
+} from "./layout";
 
 export type Activity = "offline" | "idle" | "active" | "waiting";
 
@@ -34,8 +40,39 @@ export interface AvatarModel {
   activity: Activity;
   task: string | null;
   bubble: BubbleContent | null;
+  /** Onde o avatar deve estar agora (o posto, ou o lugar à mesa de debate). */
   position: Point;
+  /** Posto fixo (onde fica a mesa). */
+  home: Point;
+  /** Está sentado à mesa de debate. */
+  atTable: boolean;
   visitor: boolean;
+}
+
+export interface DebateLike {
+  state: string;
+  updatedAt: string | null;
+}
+
+/** Quanto tempo um debate "em debate" sem novidade ainda conta como em andamento. */
+const DEBATE_FRESH_MS = 3 * 60 * 1000;
+
+/**
+ * O Orquestrador e o Crítico vão à mesa de debate quando o Crítico está trabalhando, ou quando
+ * há um debate em andamento (recente) e o Orquestrador está ocupado respondendo.
+ */
+export function isDebating(
+  critic: Activity,
+  orchestrator: Activity,
+  debate: DebateLike | null | undefined,
+  now: number,
+): boolean {
+  if (critic === "active" || critic === "waiting") return true;
+  if (!debate || debate.state !== "em debate" || !debate.updatedAt)
+    return false;
+  const updated = Date.parse(debate.updatedAt);
+  if (Number.isNaN(updated) || now - updated > DEBATE_FRESH_MS) return false;
+  return orchestrator !== "idle" && orchestrator !== "offline";
 }
 
 const ACTIVE_AGENT_STATES = new Set([
@@ -97,10 +134,16 @@ export function initials(name: string): string {
   return (words[0][0] + words[1][0]).toUpperCase();
 }
 
+export interface BuildOptions {
+  debate?: DebateLike | null;
+  now?: number;
+}
+
 export function buildAvatars(
   roster: RosterLike[],
   agents: Iterable<AgentAnimationState>,
   boss: BossLike,
+  options: BuildOptions = {},
 ): AvatarModel[] {
   const bySlug = new Map<string, AgentAnimationState>();
   const visitors: AgentAnimationState[] = [];
@@ -119,12 +162,26 @@ export function buildAvatars(
     }
   }
 
+  const criticAgent = bySlug.get("critico");
+  const debating = isDebating(
+    criticAgent ? agentActivity(criticAgent.backendState) : "offline",
+    bossActivity(boss.backendState),
+    options.debate,
+    options.now ?? Date.now(),
+  );
+
   const models: AvatarModel[] = [];
 
   for (const entry of roster) {
     const station = STATIONS[entry.slug];
     if (!station) continue;
-    const position = { x: station.x, y: station.y };
+    const home = { x: station.x, y: station.y };
+    const seat =
+      debating && (entry.slug === "orquestrador" || entry.slug === "critico")
+        ? DEBATE_SEATS[entry.slug]
+        : null;
+    const position = seat ?? home;
+    const atTable = seat !== null;
 
     if (entry.slug === "orquestrador") {
       models.push({
@@ -137,6 +194,8 @@ export function buildAvatars(
         task: cleanTask(boss.currentTask),
         bubble: boss.bubble.content,
         position,
+        home,
+        atTable,
         visitor: false,
       });
       continue;
@@ -153,6 +212,8 @@ export function buildAvatars(
       task: cleanTask(agent?.currentTask),
       bubble: agent?.bubble.content ?? null,
       position,
+      home,
+      atTable,
       visitor: false,
     });
   }
@@ -168,6 +229,8 @@ export function buildAvatars(
       task: cleanTask(agent.currentTask),
       bubble: agent.bubble.content,
       position: visitorSlot(index),
+      home: visitorSlot(index),
+      atTable: false,
       visitor: true,
     });
   });

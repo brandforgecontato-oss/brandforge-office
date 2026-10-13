@@ -93,7 +93,7 @@ export function drawDesk(g: Graphics, active: boolean): void {
 }
 
 /** Mesa redonda da sala de debate, com as cadeiras. */
-export function drawDebateTable(g: Graphics): void {
+export function drawDebateTable(g: Graphics, glow = false): void {
   g.clear();
   const { x, y, radius } = DEBATE_TABLE;
   for (let i = 0; i < 8; i++) {
@@ -105,10 +105,14 @@ export function drawDebateTable(g: Graphics): void {
     );
     g.fill(PALETTE.deskTop);
   }
+  if (glow) {
+    g.circle(x, y, radius + 8);
+    g.fill({ color: PALETTE.gold, alpha: 0.12 });
+  }
   g.circle(x, y, radius);
   g.fill(PALETTE.desk);
   g.circle(x, y, radius);
-  g.stroke({ width: 1.5, color: PALETTE.gold, alpha: 0.45 });
+  g.stroke({ width: 1.5, color: PALETTE.gold, alpha: glow ? 0.95 : 0.45 });
   g.circle(x, y, radius - 14);
   g.stroke({ width: 1, color: PALETTE.gold, alpha: 0.18 });
 }

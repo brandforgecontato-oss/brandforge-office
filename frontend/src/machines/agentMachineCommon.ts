@@ -299,7 +299,7 @@ export function buildSharedActions(actions: AgentMachineActions) {
     // Arrival conversation actions
     showArrivalBossBubble: ({ context }: { context: AgentMachineContext }) => {
       const name = context.agentName ?? "Agent";
-      actions.onShowBossBubble(`Here's your task, ${name}!`, "clipboard");
+      actions.onShowBossBubble(`Aqui está a sua tarefa, ${name}!`, "clipboard");
     },
     showArrivalAgentBubble: ({ context }: { context: AgentMachineContext }) => {
       actions.onShowAgentBubble(
